@@ -16,6 +16,7 @@ struct ChatPage {
   @State targetUserName: string = '';
   @State targetUserId: string = '';
   @State sendScale: number = 1;
+  @State btnScale: number = 1;
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
@@ -154,6 +155,7 @@ struct ChatPage {
               .width('100%')
               .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG })
             }
+            .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
           })
         }
         .width('100%')
@@ -204,5 +206,6 @@ struct ChatPage {
     }
     .width('100%')
     .height('100%')
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
   }
 }

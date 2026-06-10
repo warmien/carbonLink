@@ -38,16 +38,18 @@ export struct RecommendSection {
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
       } else {
-        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start, alignContent: FlexAlign.Start }) {
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignContent: FlexAlign.Start }) {
           ForEach(this.recommendations, (rec: Recommendation) => {
             Column() {
               RecommendProductCard({
                 recommendation: rec
               })
             }
-            .margin(5)
+            .width('48%')
+            .margin({ bottom: 8 })
           })
         }
+        .width('100%')
       }
     }
     .width('100%')

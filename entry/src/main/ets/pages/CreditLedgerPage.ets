@@ -10,6 +10,7 @@ struct CreditLedgerPage {
   @State currentFilter: string = 'all';
   @State currentPage: number = 1;
   @State hasMore: boolean = true;
+  @State btnScale: number = 1;
   private userId: string = 'user_1';
   private pageSize: number = 20;
 
@@ -92,6 +93,7 @@ struct CreditLedgerPage {
             ListItem() {
               this.TransactionItem(tx)
             }
+            .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
           })
           ListItem() {
             if (this.hasMore) {
@@ -113,6 +115,7 @@ struct CreditLedgerPage {
     .width('100%')
     .height('100%')
     .backgroundColor(ThemeManager.BG_PRIMARY)
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
   }
 
   @Builder

@@ -38,15 +38,16 @@ struct ProductDetailPage {
   }
 
   build() {
-    if (this.product === null) {
-      Column() {
-        EmptyState({ message: '商品不存在', actionText: '返回首页', onAction: () => RouterManager.back() })
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor(ThemeManager.BG_PRIMARY)
-    } else {
-      Column() {
+    Column() {
+      if (this.product === null) {
+        Column() {
+          EmptyState({ message: '商品不存在', actionText: '返回首页', onAction: () => RouterManager.back() })
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor(ThemeManager.BG_PRIMARY)
+      } else {
+        Column() {
         Row() {
           Image($r('sys.symbol.chevron_left'))
             .width(24)
@@ -240,11 +241,16 @@ struct ProductDetailPage {
         .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_SM, bottom: AppConstants.SPACING_SM })
         .backgroundColor(ThemeManager.BG_CARD)
       }
-      .width('100%')
-      .height('100%')
+        .width('100%')
+        .height('100%')
+      }
     }
+    .width('100%')
+    .height('100%')
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
   }
 }
+
 
 @Component
 struct TagBadge {

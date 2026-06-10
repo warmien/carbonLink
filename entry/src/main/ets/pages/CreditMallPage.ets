@@ -16,6 +16,7 @@ struct CreditMallPage {
   @State selectedProduct: MallProduct | null = null;
   @State exchangeRecords: ExchangeRecord[] = [];
   @State showRecords: boolean = false;
+  @State btnScale: number = 1;
   private userId: string = 'user_1';
 
   aboutToAppear(): void {
@@ -83,6 +84,7 @@ struct CreditMallPage {
     .width('100%')
     .height('100%')
     .backgroundColor(ThemeManager.BG_PRIMARY)
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
 
   }
 
@@ -95,6 +97,7 @@ struct CreditMallPage {
             this.ProductCard(p)
           }
           .margin(6)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
         })
       }
       .padding(16)
@@ -185,6 +188,7 @@ struct CreditMallPage {
           .width('100%')
           .padding(12)
         }
+        .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
       })
     }
     .layoutWeight(1)

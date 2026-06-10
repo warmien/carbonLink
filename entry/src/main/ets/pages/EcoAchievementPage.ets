@@ -6,6 +6,7 @@ import { ThemeManager } from '../theme/ThemeManager';
 @Component
 struct EcoAchievementPage {
   @State achievements: EcoAchievement[] = [];
+  @State btnScale: number = 1;
   private userId: string = 'user_1';
 
   aboutToAppear(): void {
@@ -30,6 +31,7 @@ struct EcoAchievementPage {
           ListItem() {
             this.AchievementCard(a)
           }
+          .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
         })
       }
       .layoutWeight(1)
@@ -38,6 +40,7 @@ struct EcoAchievementPage {
     .width('100%')
     .height('100%')
     .backgroundColor(ThemeManager.BG_PRIMARY)
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
   }
 
   @Builder

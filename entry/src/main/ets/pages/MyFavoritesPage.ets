@@ -10,6 +10,7 @@ import { EmptyState } from '../components/EmptyState';
 @Component
 struct MyFavoritesPage {
   @State products: Product[] = [];
+  @State btnScale: number = 1;
 
   aboutToAppear(): void {
     this.products = productRepository.getFavoriteProducts();
@@ -57,5 +58,6 @@ struct MyFavoritesPage {
     .width('100%')
     .height('100%')
     .backgroundColor(ThemeManager.BG_PRIMARY)
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
   }
 }

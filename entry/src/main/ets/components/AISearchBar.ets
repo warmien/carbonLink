@@ -51,10 +51,10 @@ export struct AISearchBar {
   build() {
     Column() {
       Row() {
-        Row({ space: 6 }) {
-          Image($r('sys.symbol.magnifyingglass'))
-            .width(16)
-            .height(16)
+        Row({ space: 8 }) {
+          Image($r('app.media.ic_search'))
+            .width(18)
+            .height(18)
             .fillColor(ThemeManager.TEXT_HINT)
 
           TextInput({ text: this.value, placeholder: this.placeholder })
@@ -70,23 +70,27 @@ export struct AISearchBar {
               this.showSuggestions = false;
               this.doSearch(this.value);
             })
+
+          Image($r('sys.symbol.camera_fill'))
+            .width(20)
+            .height(20)
+            .fillColor(ThemeManager.COLOR_PRIMARY)
+            .onClick(() => {
+              if (this.onCameraClick) {
+                this.onCameraClick();
+              }
+            })
         }
         .layoutWeight(1)
         .height(40)
         .backgroundColor(ThemeManager.BG_PRIMARY)
         .borderRadius(20)
         .padding({ left: 12, right: 12 })
-
-        Image($r('sys.symbol.camera_fill'))
-          .width(22)
-          .height(22)
-          .fillColor(ThemeManager.COLOR_PRIMARY)
-          .margin({ left: 10 })
-          .onClick(() => {
-            if (this.onCameraClick) {
-              this.onCameraClick();
-            }
-          })
+        .border({ width: 1, color: '#CCCCCC', style: BorderStyle.Solid })
+        .onClick(() => {
+          this.showSuggestions = false;
+          this.doSearch(this.value);
+        })
       }
       .width('100%')
       .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_XS, bottom: AppConstants.SPACING_XS })

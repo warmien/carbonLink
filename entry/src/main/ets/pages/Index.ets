@@ -47,66 +47,178 @@ export class CategoryIconItem {
 @Component
 struct Index {
   @StorageLink('currentTabIndex') currentTabIndex: number = 0;
+  @State tabScale: number = 1;
+  @State publishScale: number = 1;
   private tabsController: TabsController = new TabsController();
 
-  @Builder
-  TabBarBuilder(title: string, index: number, iconSelected: ResourceStr, iconNormal: ResourceStr) {
-    Column({ space: 2 }) {
-      Image(this.currentTabIndex === index ? iconSelected : iconNormal)
-        .width(24)
-        .height(24)
-        .fillColor(this.currentTabIndex === index ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
-      Text(title)
-        .fontSize(10)
-        .fontColor(this.currentTabIndex === index ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-  }
-
   build() {
-    Tabs({
-      barPosition: BarPosition.End,
-      controller: this.tabsController,
-      index: this.currentTabIndex
-    }) {
-      TabContent() {
-        HomePageView()
-      }
-      .tabBar(this.TabBarBuilder('首页', 0, $r('sys.symbol.house_fill'), $r('sys.symbol.house')))
 
-      TabContent() {
-        CategoryPageView()
-      }
-      .tabBar(this.TabBarBuilder('分类', 1, $r('sys.symbol.leaf_fill'), $r('sys.symbol.leaf_fill')))
+    Stack() {
+      Tabs({
+        barPosition: BarPosition.End,
+        controller: this.tabsController,
+        index: this.currentTabIndex
+      }) {
+        TabContent() {
+          HomePageView()
+        }
 
-      TabContent() {
-        PublishPageView()
-      }
-      .tabBar(this.TabBarBuilder('发布', 2, $r('sys.symbol.plus_circle_fill'), $r('sys.symbol.plus_circle')))
+        TabContent() {
+          CategoryPageView()
+        }
 
-      TabContent() {
-        MessagePageView()
-      }
-      .tabBar(this.TabBarBuilder('消息', 3, $r('sys.symbol.message_fill'), $r('sys.symbol.message')))
+        TabContent() {
+          PublishPageView()
+        }
 
-      TabContent() {
-        ProfilePageView()
+        TabContent() {
+          MessagePageView()
+        }
+
+        TabContent() {
+          ProfilePageView()
+        }
       }
-      .tabBar(this.TabBarBuilder('我的', 4, $r('sys.symbol.person_fill'), $r('sys.symbol.person')))
+      .barHeight(0)
+      .scrollable(false)
+      .animationDuration(300)
+      .onChange((index: number) => {
+        this.currentTabIndex = index;
+      })
+      .width('100%')
+      .height('100%')
+      .padding({ bottom: 80 })
+      .backgroundColor(ThemeManager.BG_PRIMARY)
+
+      Column() {
+        Row() {
+          Column({ space: 2 }) {
+            Image(this.currentTabIndex === 0 ? $r('sys.symbol.house_fill') : $r('sys.symbol.house'))
+              .width(24)
+              .height(24)
+              .fillColor(this.currentTabIndex === 0 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            Text('首页')
+              .fontSize(10)
+              .fontColor(this.currentTabIndex === 0 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+          }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .scale({ x: this.currentTabIndex === 0 ? this.tabScale : 1, y: this.currentTabIndex === 0 ? this.tabScale : 1 })
+          .animation({ duration: 100, curve: Curve.EaseOut })
+          .onClick(() => {
+            animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 0.9; });
+            setTimeout(() => { animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 1; }); }, 100);
+            this.currentTabIndex = 0; this.tabsController.changeIndex(0);
+          })
+
+          Column({ space: 2 }) {
+            Image(this.currentTabIndex === 1 ? $r('sys.symbol.leaf_fill') : $r('sys.symbol.leaf_fill'))
+              .width(24)
+              .height(24)
+              .fillColor(this.currentTabIndex === 1 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            Text('分类')
+              .fontSize(10)
+              .fontColor(this.currentTabIndex === 1 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+          }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .scale({ x: this.currentTabIndex === 1 ? this.tabScale : 1, y: this.currentTabIndex === 1 ? this.tabScale : 1 })
+          .animation({ duration: 100, curve: Curve.EaseOut })
+          .onClick(() => {
+            animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 0.9; });
+            setTimeout(() => { animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 1; }); }, 100);
+            this.currentTabIndex = 1; this.tabsController.changeIndex(1);
+          })
+
+          Column() {
+            Stack() {
+              Column()
+                .width(52)
+                .height(52)
+                .borderRadius(26)
+                .backgroundColor(Color.White)
+                .shadow({ radius: 8, color: 'rgba(0,0,0,0.15)', offsetX: 0, offsetY: 2 })
+              Column()
+                .width(44)
+                .height(44)
+                .borderRadius(22)
+                .linearGradient({
+                  direction: GradientDirection.Bottom,
+                  colors: [['#66C2A5', 0], ['#006D77', 1]]
+                })
+              Image($r('app.media.ic_publish_icon'))
+                .width(24)
+                .height(24)
+            }
+            .width(52)
+            .height(52)
+            .offset({ y: -10 })
+            .scale({ x: this.publishScale, y: this.publishScale })
+            .animation({ duration: 100, curve: Curve.EaseOut })
+
+            Text('发布减碳')
+              .fontSize(10)
+              .fontColor('#000000')
+              .margin({ top: -6 })
+          }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .onClick(() => {
+            animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.publishScale = 0.9; });
+            setTimeout(() => { animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.publishScale = 1; }); }, 100);
+            this.currentTabIndex = 2; this.tabsController.changeIndex(2);
+          })
+
+          Column({ space: 2 }) {
+            Image(this.currentTabIndex === 3 ? $r('sys.symbol.message_fill') : $r('sys.symbol.message'))
+              .width(24)
+              .height(24)
+              .fillColor(this.currentTabIndex === 3 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            Text('消息')
+              .fontSize(10)
+              .fontColor(this.currentTabIndex === 3 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+          }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .scale({ x: this.currentTabIndex === 3 ? this.tabScale : 1, y: this.currentTabIndex === 3 ? this.tabScale : 1 })
+          .animation({ duration: 100, curve: Curve.EaseOut })
+          .onClick(() => {
+            animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 0.9; });
+            setTimeout(() => { animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 1; }); }, 100);
+            this.currentTabIndex = 3; this.tabsController.changeIndex(3);
+          })
+
+          Column({ space: 2 }) {
+            Image(this.currentTabIndex === 4 ? $r('sys.symbol.person_fill') : $r('sys.symbol.person'))
+              .width(24)
+              .height(24)
+              .fillColor(this.currentTabIndex === 4 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            Text('我的')
+              .fontSize(10)
+              .fontColor(this.currentTabIndex === 4 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+          }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .scale({ x: this.currentTabIndex === 4 ? this.tabScale : 1, y: this.currentTabIndex === 4 ? this.tabScale : 1 })
+          .animation({ duration: 100, curve: Curve.EaseOut })
+          .onClick(() => {
+            animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 0.9; });
+            setTimeout(() => { animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.tabScale = 1; }); }, 100);
+            this.currentTabIndex = 4; this.tabsController.changeIndex(4);
+          })
+        }
+        .width('100%')
+        .height(80)
+        .backgroundColor(ThemeManager.BG_CARD)
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .height(80)
+      .position({ x: 0, y: '100%' })
+      .translate({ y: -80 })
     }
-    .barHeight(56)
-    .barWidth('100%')
-    .barBackgroundColor(ThemeManager.BG_CARD)
-    .scrollable(false)
-    .animationDuration(300)
-    .onChange((index: number) => {
-      this.currentTabIndex = index;
-    })
     .width('100%')
     .height('100%')
-    .backgroundColor(ThemeManager.BG_PRIMARY)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }
@@ -281,7 +393,7 @@ struct CategoryPageView {
           .fontColor(ThemeManager.TEXT_PRIMARY)
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_LG, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
 
       Row() {
         // 左侧分类列表
@@ -566,7 +678,7 @@ struct PublishPageView {
           })
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_LG, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
 
       Scroll() {
         Column({ space: 0 }) {
@@ -842,7 +954,10 @@ struct PublishPageView {
     .width('100%')
     .height('100%')
     .backgroundColor('rgba(0,0,0,0.5)')
+
     .onClick(() => { this.showCategoryPicker = false; })
+    .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.EaseOut }))
+    .zIndex(999)
   }
 
   @Builder ConditionPickerDialog() {
@@ -914,7 +1029,10 @@ struct PublishPageView {
     .width('100%')
     .height('100%')
     .backgroundColor('rgba(0,0,0,0.5)')
+
     .onClick(() => { this.showConditionPicker = false; })
+    .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.EaseOut }))
+    .zIndex(999)
   }
 
   @Builder ImageSourcePickerDialog() {
@@ -1003,7 +1121,10 @@ struct PublishPageView {
     .width('100%')
     .height('100%')
     .backgroundColor('rgba(0,0,0,0.5)')
+
     .onClick(() => { this.showImageSourcePicker = false; })
+    .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.EaseOut }))
+    .zIndex(999)
   }
 }
 
@@ -1025,7 +1146,7 @@ struct MessagePageView {
           .fontColor(ThemeManager.TEXT_PRIMARY)
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_LG, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
 
       if (this.conversations.length === 0) {
         EmptyState({ icon: $r('sys.symbol.message_fill'), message: '暂无消息' })
@@ -1184,7 +1305,7 @@ struct ProfilePageView {
         .width('100%')
         .backgroundColor('#F5F7FA')
         .borderRadius(16)
-        .margin({ left: 16, right: 16 })
+        .margin({ left: 16, right: 16, top: 32 })
 
         Row() {
           Column({ space: 4 }) {

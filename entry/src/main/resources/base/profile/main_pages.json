@@ -1,5 +1,6 @@
 {
   "src": [
+    "pages/SplashAdPage",
     "pages/Index",
     "pages/ProductDetailPage",
     "pages/ChatPage",
