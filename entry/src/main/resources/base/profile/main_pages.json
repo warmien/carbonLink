@@ -1,0 +1,14 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/ProductDetailPage",
+    "pages/ChatPage",
+    "pages/MyProductsPage",
+    "pages/MyFavoritesPage",
+    "pages/OrderCenterPage",
+    "pages/CreditCenterPage",
+    "pages/CreditLedgerPage",
+    "pages/EcoAchievementPage",
+    "pages/CreditMallPage"
+  ]
+}

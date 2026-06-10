@@ -1,0 +1,20 @@
+﻿{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "碳易链"
+    },
+    {
+      "name": "module_desc",
+      "value": "AI+碳积分智能循环交易平台"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "碳易链 - 绿色循环经济"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "碳易链"
+    }
+  ]
+}

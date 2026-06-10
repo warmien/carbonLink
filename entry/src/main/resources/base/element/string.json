@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "AI+碳积分智能循环交易平台"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "碳易链 - 绿色循环经济"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "碳易链"
+    },
+    {
+      "name": "perm_read_image_reason",
+      "value": "需要相册访问权限以选择商品图片"
+    },
+    {
+      "name": "perm_camera_reason",
+      "value": "需要相机权限以拍摄商品图片"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "color": [
+    {
+      "name": "bg_primary",
+      "value": "#0D0D0D"
+    },
+    {
+      "name": "bg_secondary",
+      "value": "#1A1A1A"
+    },
+    {
+      "name": "bg_card",
+      "value": "#262626"
+    },
+    {
+      "name": "text_primary",
+      "value": "#E5E5E5"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#999999"
+    },
+    {
+      "name": "text_hint",
+      "value": "#666666"
+    },
+    {
+      "name": "divider",
+      "value": "#333333"
+    },
+    {
+      "name": "start_window_background",
+      "value": "#0D0D0D"
+    }
+  ]
+}
