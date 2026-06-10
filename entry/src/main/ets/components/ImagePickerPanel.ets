@@ -11,19 +11,6 @@ export struct ImagePickerPanel {
 
   build() {
     Column() {
-      Row() {
-        Text('添加图片')
-          .fontSize(AppConstants.FONT_LG)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(ThemeManager.TEXT_PRIMARY)
-        Blank()
-        Text(`${this.images.length}/${this.maxCount}`)
-          .fontSize(AppConstants.FONT_SM)
-          .fontColor(ThemeManager.TEXT_HINT)
-      }
-      .width('100%')
-      .margin({ bottom: AppConstants.SPACING_SM })
-
       Scroll() {
         Row({ space: AppConstants.SPACING_SM }) {
           ForEach(this.images, (img: string, index: number) => {
@@ -56,21 +43,18 @@ export struct ImagePickerPanel {
           })
 
           if (this.images.length < this.maxCount) {
-            Column({ space: 4 }) {
+            Column() {
               Text('+')
-                .fontSize(28)
+                .fontSize(36)
                 .fontWeight(FontWeight.Bold)
-                .fontColor(ThemeManager.COLOR_PRIMARY)
-              Text('添加图片')
-                .fontSize(AppConstants.FONT_XS)
-                .fontColor(ThemeManager.TEXT_HINT)
+                .fontColor('#5CB8A0')
             }
-            .width(80)
-            .height(80)
+            .width(100)
+            .height(100)
             .borderRadius(AppConstants.RADIUS_MD)
-            .backgroundColor('#F5F5F5')
-            .border({ width: 1, color: ThemeManager.DIVIDER, style: BorderStyle.Dashed })
+            .border({ width: 1.5, color: '#5CB8A0', style: BorderStyle.Dashed })
             .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
             .scale({ x: this.isAddPressed ? 0.95 : 1, y: this.isAddPressed ? 0.95 : 1 })
             .animation({ duration: 150, curve: Curve.EaseOut })
             .onClick(() => {

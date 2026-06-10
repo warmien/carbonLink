@@ -14,6 +14,7 @@ struct CreditCenterPage {
   @State todayEarned: number = 0;
   @State levelProgress: number = 0;
   @State nextLevelThreshold: number = 100;
+  @State totalReduction: number = 0;
   @State btnScale: number = 1;
   private userId: string = 'user_1';
 
@@ -27,6 +28,7 @@ struct CreditCenterPage {
     this.totalEarned = account.totalEarned;
     this.level = account.level;
     this.todayEarned = creditTransactionRepository.getTodayEarned(this.userId);
+    this.totalReduction = creditTransactionRepository.getTotalReduction(this.userId);
     this.calcLevelProgress();
   }
 
@@ -122,6 +124,18 @@ struct CreditCenterPage {
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
             .fontColor(ThemeManager.TEXT_PRIMARY)
+            .margin({ top: 2 })
+        }
+        .layoutWeight(1)
+
+        Column() {
+          Text('碳减排量')
+            .fontSize(11)
+            .fontColor(ThemeManager.TEXT_HINT)
+          Text(this.totalReduction.toFixed(1) + 'kg')
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#5CB8A0')
             .margin({ top: 2 })
         }
         .layoutWeight(1)

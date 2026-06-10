@@ -1,7 +1,7 @@
 import { Product, ProductCondition } from '../models/Product';
 import { User } from '../models/User';
 import { Conversation } from '../models/Message';
-import { PricingResult } from '../models/PricingResult';
+
 
 import { productRepository } from '../repository/ProductRepository';
 import { userRepository } from '../repository/UserRepository';
@@ -14,7 +14,7 @@ import { UserCard } from '../components/UserCard';
 import { EmptyState } from '../components/EmptyState';
 import { AIRecognitionIndicator } from '../components/AIRecognitionIndicator';
 import { ImagePickerPanel } from '../components/ImagePickerPanel';
-import { AIPricingResultCard } from '../components/AIPricingResultCard';
+
 import { ThemeManager } from '../theme/ThemeManager';
 import { AppConstants } from '../constants/AppConstants';
 import { AiBackendConfig } from '../constants/AiBackendConfig';
@@ -28,8 +28,8 @@ import { RecommendSection } from '../components/RecommendSection';
 import { Recommendation } from '../models/Recommendation';
 import { ImagePickerService } from '../services/ImagePickerService';
 import { AIRecognitionService } from '../services/AIRecognitionService';
-import { AIPricingService } from '../services/AIPricingService';
-import { AIDescriptionService } from '../services/AIDescriptionService';
+
+
 import { promptAction } from '@kit.ArkUI';
 
 export class CategoryIconItem {
@@ -93,13 +93,12 @@ struct Index {
       Column() {
         Row() {
           Column({ space: 2 }) {
-            Image(this.currentTabIndex === 0 ? $r('sys.symbol.house_fill') : $r('sys.symbol.house'))
-              .width(24)
-              .height(24)
-              .fillColor(this.currentTabIndex === 0 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            SymbolGlyph(this.currentTabIndex === 0 ? $r('sys.symbol.house_fill') : $r('sys.symbol.house'))
+              .fontSize(24)
+              .fontColor(this.currentTabIndex === 0 ? ['#5CB8A0'] : ['#000000'])
             Text('首页')
               .fontSize(10)
-              .fontColor(this.currentTabIndex === 0 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+              .fontColor('#000000')
           }
           .layoutWeight(1)
           .justifyContent(FlexAlign.Center)
@@ -112,13 +111,12 @@ struct Index {
           })
 
           Column({ space: 2 }) {
-            Image(this.currentTabIndex === 1 ? $r('sys.symbol.leaf_fill') : $r('sys.symbol.leaf_fill'))
-              .width(24)
-              .height(24)
-              .fillColor(this.currentTabIndex === 1 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            SymbolGlyph($r('sys.symbol.leaf_fill'))
+              .fontSize(24)
+              .fontColor(this.currentTabIndex === 1 ? ['#5CB8A0'] : ['#000000'])
             Text('分类')
               .fontSize(10)
-              .fontColor(this.currentTabIndex === 1 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+              .fontColor('#000000')
           }
           .layoutWeight(1)
           .justifyContent(FlexAlign.Center)
@@ -170,13 +168,12 @@ struct Index {
           })
 
           Column({ space: 2 }) {
-            Image(this.currentTabIndex === 3 ? $r('sys.symbol.message_fill') : $r('sys.symbol.message'))
-              .width(24)
-              .height(24)
-              .fillColor(this.currentTabIndex === 3 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            SymbolGlyph(this.currentTabIndex === 3 ? $r('sys.symbol.message_fill') : $r('sys.symbol.message'))
+              .fontSize(24)
+              .fontColor(this.currentTabIndex === 3 ? ['#5CB8A0'] : ['#000000'])
             Text('消息')
               .fontSize(10)
-              .fontColor(this.currentTabIndex === 3 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+              .fontColor('#000000')
           }
           .layoutWeight(1)
           .justifyContent(FlexAlign.Center)
@@ -189,13 +186,12 @@ struct Index {
           })
 
           Column({ space: 2 }) {
-            Image(this.currentTabIndex === 4 ? $r('sys.symbol.person_fill') : $r('sys.symbol.person'))
-              .width(24)
-              .height(24)
-              .fillColor(this.currentTabIndex === 4 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+            SymbolGlyph(this.currentTabIndex === 4 ? $r('sys.symbol.person_fill') : $r('sys.symbol.person'))
+              .fontSize(24)
+              .fontColor(this.currentTabIndex === 4 ? ['#5CB8A0'] : ['#000000'])
             Text('我的')
               .fontSize(10)
-              .fontColor(this.currentTabIndex === 4 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
+              .fontColor('#000000')
           }
           .layoutWeight(1)
           .justifyContent(FlexAlign.Center)
@@ -463,7 +459,10 @@ struct PublishPageView {
   @State price: string = '';
   @State originalPrice: string = '';
   @State selectedCategory: string = '';
+  @State selectedSubCategory: string = '';
   @State selectedCondition: string = '';
+  @State calculatedCredits: number = 0;
+  @State calculatedReduction: number = 0;
   @State images: string[] = [];
   @State showCategoryPicker: boolean = false;
   @State showConditionPicker: boolean = false;
@@ -472,12 +471,26 @@ struct PublishPageView {
   @State recognitionStatus: string = 'idle';
   @State recognitionError: string = '';
   @State isRecognizing: boolean = false;
-  @State isPricing: boolean = false;
-  @State isGeneratingDesc: boolean = false;
-  @State pricingResult: PricingResult = new PricingResult();
+  @State aiRecognizeScale: number = 1;
+
   private recognizedUris: Set<string> = new Set();
 
   aboutToAppear(): void {
+  }
+
+  private updateCarbonCredits(): void {
+    if (this.selectedCategory !== '' && this.selectedSubCategory !== '' && this.selectedCondition !== '') {
+      const result = CreditEngine.calculateProductCredits(this.selectedCategory, this.selectedSubCategory, this.selectedCondition);
+      this.calculatedCredits = result.carbonCredits;
+      this.calculatedReduction = result.carbonReduction;
+    } else if (this.selectedCategory !== '' && this.selectedSubCategory !== '') {
+      const result = CreditEngine.calculateProductCredits(this.selectedCategory, this.selectedSubCategory, ProductCondition.C_GRADE);
+      this.calculatedCredits = Math.round(result.carbonCredits * 100) / 100;
+      this.calculatedReduction = Math.round(result.carbonReduction * 100) / 100;
+    } else {
+      this.calculatedCredits = 0;
+      this.calculatedReduction = 0;
+    }
   }
 
   private async handleImageAdd(): Promise<void> {
@@ -496,7 +509,7 @@ struct PublishPageView {
       return;
     }
     this.images = [...this.images, ...uris];
-    this.tryRecognize(uris[0]);
+
   }
 
   private async takePhoto(): Promise<void> {
@@ -504,7 +517,7 @@ struct PublishPageView {
     const uri = await ImagePickerService.takePhoto();
     if (uri) {
       this.images = [...this.images, uri];
-      this.tryRecognize(uri);
+
     }
   }
 
@@ -519,18 +532,56 @@ struct PublishPageView {
     const result = await AIRecognitionService.recognize(imageUri, config);
     this.isRecognizing = false;
     if (result.success) {
-      if (result.itemName && this.title.trim() === '') {
+      if (result.itemName) {
         this.title = result.itemName;
       }
-      if (result.mappedCondition && this.selectedCondition === '') {
+      if (result.mappedCondition) {
         this.selectedCondition = result.mappedCondition;
       }
-      if (result.condition && this.selectedCategory === '') {
-        const matchedCat = this.matchCategory(result.itemName || '');
+      if (result.category) {
+        const isValidCat = AppConstants.CATEGORIES.indexOf(result.category) >= 0;
+        if (isValidCat) {
+          this.selectedCategory = result.category;
+        }
+      }
+      if (!this.selectedCategory && result.itemName) {
+        const matchedCat = this.matchCategory(result.itemName);
         if (matchedCat) {
           this.selectedCategory = matchedCat;
         }
       }
+      if (result.subCategory && this.selectedCategory) {
+        const subs = AppConstants.SUB_CATEGORIES[this.selectedCategory];
+        if (subs) {
+          let matched = false;
+          for (let i = 0; i < subs.length; i++) {
+            if (subs[i] === result.subCategory || result.subCategory.indexOf(subs[i].replace('类', '')) >= 0 || subs[i].indexOf(result.subCategory) >= 0) {
+              this.selectedSubCategory = subs[i];
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            this.selectedSubCategory = subs.length > 0 ? subs[0] : '';
+          }
+        }
+      }
+      if (!this.selectedSubCategory && result.itemName && this.selectedCategory) {
+        const matchedSub = this.matchSubCategory(result.itemName, this.selectedCategory);
+        if (matchedSub) {
+          this.selectedSubCategory = matchedSub;
+        }
+      }
+      if (result.description) {
+        this.description = result.description;
+      }
+      if (result.suggestedPrice > 0) {
+        this.price = result.suggestedPrice.toString();
+      }
+      if (result.originalPrice > 0) {
+        this.originalPrice = result.originalPrice.toString();
+      }
+      this.updateCarbonCredits();
       this.recognitionStatus = 'success';
       setTimeout(() => { this.recognitionStatus = 'idle'; }, 1500);
     } else {
@@ -541,14 +592,17 @@ struct PublishPageView {
   }
 
   private matchCategory(name: string): string {
-    const categories: string[] = ['电子产品', '图书', '服装', '家居', '数码', '运动'];
+    const categories: string[] = ['电子数码', '图书教材', '服装鞋帽', '家居生活', '美妆护肤', '运动户外', '文具办公', '乐器文创', '虚拟服务'];
     const keywords: string[][] = [
-      ['手机', 'iPhone', 'iPad', '电脑', '笔记本', '耳机', '音箱', '手表', '平板', '相机', '键盘', '鼠标'],
-      ['书', '教材', '小说', '杂志', '绘本', '字典'],
-      ['衣服', '裤', '裙', '外套', '鞋', 'T恤', '衬衫', '夹克', '羽绒服'],
-      ['家具', '沙发', '床', '桌', '椅', '灯', '收纳', '装饰'],
-      ['充电', '数据线', '保护壳', '贴膜', '支架', '移动电源'],
-      ['跑步', '瑜伽', '健身', '球', '滑板', '自行车'],
+      ['手机', 'iPhone', 'iPad', '电脑', '笔记本', '耳机', '音箱', '手表', '平板', '相机', '键盘', '鼠标', '充电宝', '显示器', '吹风机', '收音机', '插座'],
+      ['书', '教材', '小说', '杂志', '绘本', '字典', '网课'],
+      ['衣服', '裤', '裙', '外套', '鞋', 'T恤', '衬衫', '夹克', '羽绒服', '包', '帽'],
+      ['家具', '沙发', '床', '桌', '椅', '灯', '收纳', '装饰', '锅', '风扇', '秤', '剪刀'],
+      ['护肤', '面膜', '防晒', '卸妆', '底妆', '眼妆', '唇', '美甲', '香水', '化妆'],
+      ['跑步', '瑜伽', '健身', '球', '滑板', '自行车', '电动车', '跳绳'],
+      ['文具', '计算器', '笔', '本'],
+      ['乐器', '吉他', '钢琴', '文创', '绿植'],
+      ['网课', '账号', '健身卡', '水卡'],
     ];
     for (let i = 0; i < categories.length; i++) {
       const kws = keywords[i];
@@ -561,51 +615,26 @@ struct PublishPageView {
     return '';
   }
 
+  private matchSubCategory(name: string, category: string): string {
+    const subs = AppConstants.SUB_CATEGORIES[category];
+    if (!subs || subs.length === 0) {
+      return '';
+    }
+    for (let i = 0; i < subs.length; i++) {
+      const sub = subs[i].replace('类', '');
+      if (name.indexOf(sub) >= 0) {
+        return subs[i];
+      }
+    }
+    return subs[0];
+  }
+
   private async reRecognize(): Promise<void> {
     if (this.images.length === 0 || this.isRecognizing) return;
     this.recognizedUris.clear();
     this.tryRecognize(this.images[0]);
   }
 
-
-  private async doPricing(): Promise<void> {
-    if (this.title.trim() === '') {
-      promptAction.showToast({ message: '请先输入商品标题' });
-      return;
-    }
-    if (this.selectedCategory === '') {
-      promptAction.showToast({ message: '请先选择分类' });
-      return;
-    }
-    this.isPricing = true;
-    const config = AiBackendConfig.getPricingConfig();
-    const result = await AIPricingService.pricing(this.title, this.selectedCategory, this.selectedCondition, '', config);
-    this.pricingResult = result;
-    this.isPricing = false;
-    if (!result.success) {
-      promptAction.showToast({ message: result.errorMessage });
-    }
-  }
-
-  private async doGenerateDesc(): Promise<void> {
-    if (this.title.trim() === '') {
-      promptAction.showToast({ message: '请先输入商品标题' });
-      return;
-    }
-    this.isGeneratingDesc = true;
-    const config = AiBackendConfig.getDescriptionConfig();
-    const result = await AIDescriptionService.generate(this.title, this.selectedCategory, this.selectedCondition, this.images, config);
-    this.isGeneratingDesc = false;
-    if (result.success && result.description) {
-      if (this.description.trim() === '') {
-        this.description = result.description;
-      } else {
-        this.description = result.description;
-      }
-    } else {
-      promptAction.showToast({ message: result.errorMessage || '描述生成失败' });
-    }
-  }
 
   build() {
     Stack() {
@@ -655,7 +684,10 @@ struct PublishPageView {
             product.price = priceVal;
             product.originalPrice = origPriceVal;
             product.category = this.selectedCategory;
+            product.subCategory = this.selectedSubCategory;
             product.condition = this.selectedCondition;
+            product.carbonReduction = this.calculatedReduction;
+            product.carbonCredits = this.calculatedCredits;
             product.images = this.images;
             product.sellerId = user.id;
             product.sellerName = user.nickname;
@@ -665,15 +697,21 @@ struct PublishPageView {
             productRepository.addProduct(product);
             CreditEngine.onProductPublished(product.id, user.id);
             AchievementDetector.detect(user.id, 'publish');
-            promptAction.showToast({ message: '发布成功！+10积分' });
+            const toastMsg = this.calculatedCredits > 0 ?
+              '发布成功！+10积分  碳积分+' + this.calculatedCredits :
+              '发布成功！+10积分';
+            promptAction.showToast({ message: toastMsg });
             this.title = '';
             this.description = '';
             this.price = '';
             this.originalPrice = '';
             this.selectedCategory = '';
+            this.selectedSubCategory = '';
             this.selectedCondition = '';
+            this.calculatedCredits = 0;
+            this.calculatedReduction = 0;
             this.images = [];
-            this.pricingResult = new PricingResult();
+
             AppStorage.setOrCreate('needRefreshProducts', true);
           })
       }
@@ -700,18 +738,64 @@ struct PublishPageView {
           .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG })
 
           Row() {
-            Button('AI识别')
-              .fontSize(AppConstants.FONT_XS)
-              .backgroundColor('#E8F8F0')
-              .fontColor(ThemeManager.COLOR_PRIMARY)
-              .borderRadius(14)
+            if (this.isRecognizing) {
+              Row({ space: 4 }) {
+                LoadingProgress()
+                  .width(14)
+                  .height(14)
+                  .color(Color.White)
+                Text('识别中...')
+                  .fontSize(AppConstants.FONT_XS)
+                  .fontColor(Color.White)
+              }
               .height(26)
-              .padding({ left: 10, right: 10 })
-              .enabled(!this.isRecognizing && this.images.length > 0)
-              .onClick(() => { this.reRecognize(); })
+              .padding({ left: 12, right: 12 })
+              .borderRadius(13)
+              .backgroundColor('#5CB8A0')
+            } else {
+              Button('AI识别')
+                .fontSize(AppConstants.FONT_XS)
+                .backgroundColor(this.images.length > 0 ? '#5CB8A0' : '#CCCCCC')
+                .fontColor(Color.White)
+                .borderRadius(13)
+                .height(26)
+                .padding({ left: 12, right: 12 })
+                .enabled(this.images.length > 0)
+                .scale({ x: this.images.length > 0 ? this.aiRecognizeScale : 1, y: this.images.length > 0 ? this.aiRecognizeScale : 1 })
+                .animation({ duration: 100, curve: Curve.EaseOut })
+                .onClick(() => {
+                  animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.aiRecognizeScale = 0.9; });
+                  setTimeout(() => { animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.aiRecognizeScale = 1; }); }, 100);
+                  this.reRecognize();
+                })
+            }
           }
           .width('100%')
           .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_SM, bottom: AppConstants.SPACING_SM })
+
+          Column() {
+            Row() {
+              Text('商品描述')
+                .fontSize(AppConstants.FONT_LG)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(ThemeManager.TEXT_PRIMARY)
+            }
+            .width('100%')
+
+            TextArea({ text: this.description, placeholder: '描述商品使用情况、购买时间、瑕疵等...' })
+              .fontSize(AppConstants.FONT_MD)
+              .height(120)
+              .backgroundColor(ThemeManager.BG_PRIMARY)
+              .borderRadius(AppConstants.RADIUS_MD)
+              .padding(AppConstants.SPACING_MD)
+              .margin({ top: AppConstants.SPACING_SM })
+              .onChange((text: string) => { this.description = text; })
+          }
+          .width('100%')
+          .padding(AppConstants.SPACING_MD)
+          .backgroundColor(ThemeManager.BG_CARD)
+          .borderRadius(AppConstants.RADIUS_LG)
+          .margin({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_SM })
 
           Column() {
             FormItem({ label: '标题', required: true }) {
@@ -724,7 +808,7 @@ struct PublishPageView {
 
             FormItem({ label: '分类', required: true }) {
               Row() {
-                Text(this.selectedCategory !== '' ? this.selectedCategory : '请选择分类')
+                Text(this.selectedCategory !== '' ? (this.selectedSubCategory !== '' ? this.selectedCategory + ' · ' + this.selectedSubCategory : this.selectedCategory) : '请选择分类')
                   .fontSize(AppConstants.FONT_MD)
                   .fontColor(this.selectedCategory !== '' ? ThemeManager.TEXT_PRIMARY : ThemeManager.TEXT_HINT)
                 Blank()
@@ -752,51 +836,29 @@ struct PublishPageView {
               .onClick(() => { this.showConditionPicker = true; })
             }
 
+            FormItem({ label: '碳积分' }) {
+              Text(this.calculatedCredits > 0 ? '+' + this.calculatedCredits + ' 积分' : '选择分类和成色后计算')
+                .fontSize(AppConstants.FONT_MD)
+                .fontColor(this.calculatedCredits > 0 ? '#5CB8A0' : ThemeManager.TEXT_HINT)
+                .fontWeight(this.calculatedCredits > 0 ? FontWeight.Medium : FontWeight.Normal)
+                .layoutWeight(1)
+            }
+
+            FormItem({ label: '碳减排' }) {
+              Text(this.calculatedReduction > 0 ? this.calculatedReduction + ' kg CO₂e' : '选择分类和成色后计算')
+                .fontSize(AppConstants.FONT_MD)
+                .fontColor(this.calculatedReduction > 0 ? '#5CB8A0' : ThemeManager.TEXT_HINT)
+                .fontWeight(this.calculatedReduction > 0 ? FontWeight.Medium : FontWeight.Normal)
+                .layoutWeight(1)
+            }
+
             FormItem({ label: '售价 ¥', required: true }) {
-              Row({ space: 8 }) {
-                TextInput({ text: this.price, placeholder: '0.00' })
-                  .fontSize(AppConstants.FONT_MD)
-                  .type(InputType.Number)
-                  .layoutWeight(1)
-                  .backgroundColor(Color.Transparent)
-                  .onChange((text: string) => { this.price = text; })
-                Button('AI估价')
-                  .fontSize(AppConstants.FONT_XS)
-                  .backgroundColor('#E8F8F0')
-                  .fontColor(ThemeManager.COLOR_PRIMARY)
-                  .borderRadius(14)
-                  .height(26)
-                  .padding({ left: 10, right: 10 })
-                  .enabled(!this.isPricing)
-                  .onClick(() => { this.doPricing(); })
-              }
-              .layoutWeight(1)
-            }
-
-            if (this.isPricing) {
-              Row({ space: 8 }) {
-                LoadingProgress()
-                  .width(16)
-                  .height(16)
-                  .color(ThemeManager.COLOR_PRIMARY)
-                Text('AI估价中...')
-                  .fontSize(AppConstants.FONT_SM)
-                  .fontColor(ThemeManager.COLOR_PRIMARY)
-              }
-              .width('100%')
-              .padding({ left: 78, top: 4, bottom: 4 })
-              .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
-            }
-
-            if (this.pricingResult.success) {
-              AIPricingResultCard({
-                result: this.pricingResult,
-                onAdopt: (price: number) => {
-                  this.price = price.toString();
-                  this.pricingResult = new PricingResult();
-                }
-              })
-              .transition(TransitionEffect.OPACITY.combine(TransitionEffect.scale({ x: 0.95, y: 0.95 })).animation({ duration: 300 }))
+              TextInput({ text: this.price, placeholder: '0.00' })
+                .fontSize(AppConstants.FONT_MD)
+                .type(InputType.Number)
+                .layoutWeight(1)
+                .backgroundColor(Color.Transparent)
+                .onChange((text: string) => { this.price = text; })
             }
 
             FormItem({ label: '原价 ¥' }) {
@@ -814,54 +876,6 @@ struct PublishPageView {
           .borderRadius(AppConstants.RADIUS_LG)
           .margin({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_SM })
 
-          Column() {
-            Row() {
-              Text('商品描述')
-                .fontSize(AppConstants.FONT_LG)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(ThemeManager.TEXT_PRIMARY)
-              Blank()
-              Button('AI生成描述')
-                .fontSize(AppConstants.FONT_XS)
-                .backgroundColor('#E8F8F0')
-                .fontColor(ThemeManager.COLOR_PRIMARY)
-                .borderRadius(14)
-                .height(26)
-                .padding({ left: 10, right: 10 })
-                .enabled(!this.isGeneratingDesc)
-                .onClick(() => { this.doGenerateDesc(); })
-            }
-            .width('100%')
-
-            if (this.isGeneratingDesc) {
-              Row({ space: 6 }) {
-                LoadingProgress()
-                  .width(14)
-                  .height(14)
-                  .color(ThemeManager.COLOR_PRIMARY)
-                Text('AI生成中...')
-                  .fontSize(AppConstants.FONT_SM)
-                  .fontColor(ThemeManager.COLOR_PRIMARY)
-              }
-              .width('100%')
-              .margin({ top: 6 })
-              .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
-            }
-
-            TextArea({ text: this.description, placeholder: '描述商品使用情况、购买时间、瑕疵等...' })
-              .fontSize(AppConstants.FONT_MD)
-              .height(120)
-              .backgroundColor(ThemeManager.BG_PRIMARY)
-              .borderRadius(AppConstants.RADIUS_MD)
-              .padding(AppConstants.SPACING_MD)
-              .margin({ top: AppConstants.SPACING_SM })
-              .onChange((text: string) => { this.description = text; })
-          }
-          .width('100%')
-          .padding(AppConstants.SPACING_MD)
-          .backgroundColor(ThemeManager.BG_CARD)
-          .borderRadius(AppConstants.RADIUS_LG)
-          .margin({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_LG })
 
           Blank().height(80)
         }
@@ -921,9 +935,9 @@ struct PublishPageView {
 
         Divider().color(ThemeManager.DIVIDER)
 
-        Grid() {
-          ForEach(AppConstants.CATEGORIES, (cat: string) => {
-            GridItem() {
+        Row() {
+          Column() {
+            ForEach(AppConstants.CATEGORIES, (cat: string) => {
               Text(cat)
                 .fontSize(AppConstants.FONT_MD)
                 .fontColor(this.selectedCategory === cat ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_PRIMARY)
@@ -931,21 +945,44 @@ struct PublishPageView {
                 .width('100%')
                 .height(44)
                 .textAlign(TextAlign.Center)
-                .borderRadius(AppConstants.RADIUS_MD)
                 .backgroundColor(this.selectedCategory === cat ? '#E8F8F0' : Color.Transparent)
-            }
-            .onClick(() => {
-              this.selectedCategory = cat;
-              this.showCategoryPicker = false;
+                .onClick(() => {
+                  this.selectedCategory = cat;
+                  this.selectedSubCategory = '';
+                })
             })
-          })
+          }
+          .width('35%')
+          .backgroundColor('#F5F5F5')
+
+          Scroll() {
+            Column() {
+              if (this.selectedCategory !== '') {
+                ForEach(AppConstants.SUB_CATEGORIES[this.selectedCategory], (sub: string) => {
+                  Text(sub)
+                    .fontSize(AppConstants.FONT_MD)
+                    .fontColor(this.selectedSubCategory === sub ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_PRIMARY)
+                    .fontWeight(this.selectedSubCategory === sub ? FontWeight.Medium : FontWeight.Normal)
+                    .width('100%')
+                    .height(44)
+                    .textAlign(TextAlign.Center)
+                    .borderRadius(AppConstants.RADIUS_MD)
+                    .backgroundColor(this.selectedSubCategory === sub ? '#E8F8F0' : Color.Transparent)
+                    .onClick(() => {
+                      this.selectedSubCategory = sub;
+                      this.showCategoryPicker = false;
+                      this.updateCarbonCredits();
+                    })
+                })
+              }
+            }
+            .width('100%')
+          }
+          .layoutWeight(1)
+          .scrollBar(BarState.Off)
         }
-        .columnsTemplate('1fr 1fr 1fr')
-        .rowsGap(AppConstants.SPACING_XS)
-        .columnsGap(AppConstants.SPACING_XS)
         .width('100%')
-        .height(220)
-        .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_SM })
+        .height(280)
       }
       .width('100%')
       .backgroundColor(ThemeManager.BG_CARD)
@@ -994,7 +1031,7 @@ struct PublishPageView {
         Divider().color(ThemeManager.DIVIDER)
 
         Column({ space: AppConstants.SPACING_SM }) {
-          ForEach([ProductCondition.BRAND_NEW, ProductCondition.LIKE_NEW, ProductCondition.LIGHTLY_USED, ProductCondition.NORMAL_USED], (cond: string) => {
+          ForEach([ProductCondition.A_GRADE, ProductCondition.B_GRADE, ProductCondition.C_GRADE, ProductCondition.D_GRADE, ProductCondition.E_GRADE, ProductCondition.F_GRADE], (cond: string) => {
             Row() {
               Text(cond)
                 .fontSize(AppConstants.FONT_MD)
@@ -1016,6 +1053,7 @@ struct PublishPageView {
             .onClick(() => {
               this.selectedCondition = cond;
               this.showConditionPicker = false;
+              this.updateCarbonCredits();
             })
           })
         }

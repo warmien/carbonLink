@@ -40,13 +40,22 @@ struct CreditLedgerPage {
     if (type === CreditTransactionType.ACHIEVEMENT_REWARD) return '成就奖励';
     if (type === CreditTransactionType.EXCHANGE_DEDUCT) return '积分兑换';
     if (type === CreditTransactionType.EXPIRE_CLEAR) return '积分过期';
+    if (type === CreditTransactionType.DONATION_REWARD) return '捐赠奖励';
+    if (type === CreditTransactionType.REFORM_REWARD) return '改造奖励';
+    if (type === CreditTransactionType.TRANSFER_OUT) return '积分转出';
+    if (type === CreditTransactionType.TRANSFER_IN) return '积分转入';
+    if (type === CreditTransactionType.TRANSFER_FEE) return '转让手续费';
+    if (type === CreditTransactionType.VIOLATION_DEDUCT) return '违规扣除';
     return '未知';
   }
 
   isIncome(type: CreditTransactionType): boolean {
     return type === CreditTransactionType.TRADE_REWARD ||
       type === CreditTransactionType.PUBLISH_REWARD ||
-      type === CreditTransactionType.ACHIEVEMENT_REWARD;
+      type === CreditTransactionType.ACHIEVEMENT_REWARD ||
+      type === CreditTransactionType.DONATION_REWARD ||
+      type === CreditTransactionType.REFORM_REWARD ||
+      type === CreditTransactionType.TRANSFER_IN;
   }
 
   build() {

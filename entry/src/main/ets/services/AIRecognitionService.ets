@@ -71,11 +71,27 @@ export class AIRecognitionService {
           const contentObj = JSON.parse(contentStr) as Record<string, Object>;
           const nameVal = contentObj['name'];
           const condVal = contentObj['condition'];
+          const descVal = contentObj['description'];
+          const catVal = contentObj['category'];
+          const subCatVal = contentObj['subCategory'];
+          const priceVal = contentObj['suggestedPrice'];
+          const origPriceVal = contentObj['originalPrice'];
           if (nameVal !== null && nameVal !== undefined) result.itemName = String(nameVal);
           if (condVal !== null && condVal !== undefined) {
             result.condition = String(condVal);
             const mapped = ConditionMapper.mapCondition(String(condVal));
             if (mapped) result.mappedCondition = mapped;
+          }
+          if (descVal !== null && descVal !== undefined) result.description = String(descVal);
+          if (catVal !== null && catVal !== undefined) result.category = String(catVal);
+          if (subCatVal !== null && subCatVal !== undefined) result.subCategory = String(subCatVal);
+          if (priceVal !== null && priceVal !== undefined) {
+            const p = parseFloat(String(priceVal));
+            if (!isNaN(p)) result.suggestedPrice = p;
+          }
+          if (origPriceVal !== null && origPriceVal !== undefined) {
+            const op = parseFloat(String(origPriceVal));
+            if (!isNaN(op)) result.originalPrice = op;
           }
         } catch (parseErr) {
           if (contentStr) result.itemName = contentStr;

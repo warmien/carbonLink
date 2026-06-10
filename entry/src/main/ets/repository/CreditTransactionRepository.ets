@@ -14,12 +14,18 @@ export class CreditTransactionRepository {
         filtered = filtered.filter((t: CreditTransaction): boolean =>
           t.type === CreditTransactionType.TRADE_REWARD ||
           t.type === CreditTransactionType.PUBLISH_REWARD ||
-          t.type === CreditTransactionType.ACHIEVEMENT_REWARD
+          t.type === CreditTransactionType.ACHIEVEMENT_REWARD ||
+          t.type === CreditTransactionType.DONATION_REWARD ||
+          t.type === CreditTransactionType.REFORM_REWARD ||
+          t.type === CreditTransactionType.TRANSFER_IN
         );
       } else if (typeFilter === 'expense') {
         filtered = filtered.filter((t: CreditTransaction): boolean =>
           t.type === CreditTransactionType.EXCHANGE_DEDUCT ||
-          t.type === CreditTransactionType.EXPIRE_CLEAR
+          t.type === CreditTransactionType.EXPIRE_CLEAR ||
+          t.type === CreditTransactionType.TRANSFER_OUT ||
+          t.type === CreditTransactionType.TRANSFER_FEE ||
+          t.type === CreditTransactionType.VIOLATION_DEDUCT
         );
       }
     }
@@ -47,6 +53,14 @@ export class CreditTransactionRepository {
         t.userId === userId && t.timestamp >= startTs && t.amount > 0
       )
       .reduce((sum: number, t: CreditTransaction): number => sum + t.amount, 0);
+  }
+
+  getTotalReduction(userId: string): number {
+    return this.transactions
+      .filter((t: CreditTransaction): boolean =>
+        t.userId === userId && t.carbonReduction > 0
+      )
+      .reduce((sum: number, t: CreditTransaction): number => sum + t.carbonReduction, 0);
   }
 
   getTradeDates(userId: string): number[] {

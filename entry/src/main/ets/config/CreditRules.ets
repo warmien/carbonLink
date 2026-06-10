@@ -27,10 +27,16 @@ export class AchievementConfig {
 }
 
 export class CreditRules {
-  static readonly TRADE_BUYER_REWARD: number = 30;
-  static readonly TRADE_SELLER_REWARD: number = 20;
+  static readonly TRADE_BUYER_REWARD_RATIO: number = 0.2;
   static readonly PUBLISH_REWARD: number = 10;
   static readonly CREDIT_EXPIRY_MONTHS: number = 12;
+  static readonly DONATION_MULTIPLIER: number = 1.5;
+  static readonly REFORM_MULTIPLIER: number = 2.0;
+  static readonly TRANSFER_FEE_RATIO: number = 0.1;
+  static readonly VIOLATION_DEDUCT_MULTIPLIER: number = 2.0;
+  static readonly VIOLATION_SUSPEND_MONTHS_TRADE: number = 1;
+  static readonly VIOLATION_SUSPEND_MONTHS_FRAUD: number = 3;
+  static readonly HONOR_CERT_THRESHOLD: number = 500;
 
   static readonly LEVEL_THRESHOLDS: LevelThreshold[] = [
     new LevelThreshold(UserLevel.BEGINNER, 0),

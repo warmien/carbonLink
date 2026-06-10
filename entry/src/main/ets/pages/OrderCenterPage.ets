@@ -161,7 +161,7 @@ struct OrderCenterPage {
                             .height(30)
                             .onClick(() => {
                                orderRepository.updateOrderStatus(order.id, OrderStatus.COMPLETED);
-                               CreditEngine.onTradeCompleted(order.id, 'user_1', order.sellerId);
+                                CreditEngine.onTradeCompleted(order.id, 'user_1', order.sellerId, 0, 0);
                                AchievementDetector.detect('user_1', 'trade');
                                AchievementDetector.detect(order.sellerId, 'trade');
                                this.refreshOrders();

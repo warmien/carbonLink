@@ -45,7 +45,7 @@ export class AiBackendConfig {
     config.authToken = AiBackendConfig.getApiKey();
     config.timeout = 30000;
     config.headers = '{}';
-    config.bodyTemplate = '{"model":"' + AiBackendConfig.getModel() + '","messages":[{"role":"system","content":"你是二手商品识别专家。根据图片识别商品，返回JSON格式，包含name和condition两个字段。name为具体商品名称（如iPhone 15 Pro、戴森吹风机、宜家书架），condition为成色描述（如全新、9成新、8成新、轻微使用痕迹、明显使用痕迹）。请尽量准确识别品牌和型号。"},{"role":"user","content":[{"type":"text","text":"请识别这张图片中的二手商品"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,{{image_base64}}"}}]}],"response_format":{"type":"json_object"}}';
+    config.bodyTemplate = '{"model":"' + AiBackendConfig.getModel() + '","messages":[{"role":"system","content":"你是二手商品识别与估价专家。根据图片识别商品并给出完整信息，返回JSON格式，包含以下字段：name(商品名称，含品牌型号，如iPhone 15 Pro 256GB)、condition(成色等级，严格从以下选择：A级-全新未用、B级-99成新、C级-95成新、D级-9成新、E级-8成新、F级-7成新)、category(分类，严格从以下选择：电子数码、图书教材、服装鞋帽、家居生活、美妆护肤、运动户外、文具办公、乐器文创、虚拟服务、其他闲置)、subCategory(子分类，如旧手机、书籍、外套等具体品类)、description(商品描述，100字以内，突出亮点和使用情况)、suggestedPrice(建议售价，数字，单位元)、originalPrice(原价估算，数字，单位元)。请尽量准确识别品牌和型号，合理估价。"},{"role":"user","content":[{"type":"text","text":"请识别这张图片中的二手商品，返回完整信息"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,{{image_base64}}"}}]}],"response_format":{"type":"json_object"}}';
     config.responseNamePath = 'choices.0.message.content';
     config.responseConditionPath = 'choices.0.message.content';
     return config;
