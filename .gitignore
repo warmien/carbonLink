@@ -13,3 +13,11 @@
 /.arts
 /.codeartsdoer
 *.py
+
+# Server
+server/node_modules/
+server/dist/
+server/data/
+server/.env
+server/stdout.log
+server/stderr.log

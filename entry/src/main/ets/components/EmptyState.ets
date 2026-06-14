@@ -3,7 +3,7 @@ import { ThemeManager } from '../theme/ThemeManager';
 
 @Component
 export struct EmptyState {
-  @Prop icon: ResourceStr = $r('app.media.startIcon');
+  @Prop icon: ResourceStr = $r('sys.symbol.xmark_circle_fill');
   @Prop message: string = '暂无数据';
   @Prop actionText: string = '';
   onAction?: () => void;

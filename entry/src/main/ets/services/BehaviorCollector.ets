@@ -44,13 +44,23 @@ export class BehaviorCollector {
     BehaviorCollector.scheduleProfileUpdate(userId);
   }
 
-  static recordDislike(userId: string, productId: string, category: string): void {
+  static recordDislike(userId: string, productId: string, category: string, price?: number): void {
     const b = new UserBehavior();
     b.userId = userId;
     b.behaviorType = BehaviorType.DISLIKE;
     b.targetId = productId;
     b.targetCategory = category;
     behaviorRepository.addBehavior(b);
+  }
+
+  static recordLike(userId: string, productId: string, category: string, price: number): void {
+    const b = new UserBehavior();
+    b.userId = userId;
+    b.behaviorType = BehaviorType.FAVORITE;
+    b.targetId = productId;
+    b.targetCategory = category;
+    behaviorRepository.addBehavior(b);
+    BehaviorCollector.scheduleProfileUpdate(userId);
   }
 
   private static scheduleProfileUpdate(userId: string): void {

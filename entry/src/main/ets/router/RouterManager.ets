@@ -6,6 +6,46 @@ export class RouterManager {
     AppStorage.setOrCreate('currentTabIndex', tabIndex);
   }
 
+  static toLogin(): void {
+    router.replaceUrl({ url: AppConstants.ROUTE_LOGIN }).catch((err: Error) => {
+      console.error(`[RouterManager] toLogin failed: ${err.message}`);
+    });
+  }
+
+  static toRegister(): void {
+    router.pushUrl({ url: AppConstants.ROUTE_REGISTER }).catch((err: Error) => {
+      console.error(`[RouterManager] toRegister failed: ${err.message}`);
+    });
+  }
+
+  static toMainFromLogin(): void {
+    router.replaceUrl({ url: 'pages/Index' }).catch((err: Error) => {
+      console.error(`[RouterManager] toMainFromLogin failed: ${err.message}`);
+    });
+  }
+
+  static toSettings(): void {
+    router.pushUrl({ url: AppConstants.ROUTE_SETTINGS }).catch((err: Error) => {
+      console.error(`[RouterManager] toSettings failed: ${err.message}`);
+    });
+  }
+
+  static requireAuth(): boolean {
+    const isLoggedIn: boolean = AppStorage.get<boolean>('isLoggedIn') || false;
+    if (!isLoggedIn) {
+      RouterManager.toLogin();
+      return false;
+    }
+    return true;
+  }
+
+  static redirectIfLoggedIn(): void {
+    const isLoggedIn: boolean = AppStorage.get<boolean>('isLoggedIn') || false;
+    if (isLoggedIn) {
+      RouterManager.toMainFromLogin();
+    }
+  }
+
   static toProductDetail(productId: string): void {
     router.pushUrl({
       url: AppConstants.ROUTE_PRODUCT_DETAIL,
@@ -40,8 +80,12 @@ export class RouterManager {
     });
   }
 
-  static toOrderCenter(): void {
-    router.pushUrl({ url: AppConstants.ROUTE_ORDER_CENTER }).catch((err: Error) => {
+  static toOrderCenter(tabIndex?: number): void {
+    const params: Record<string, number> = {};
+    if (tabIndex !== undefined) {
+      params['tabIndex'] = tabIndex;
+    }
+    router.pushUrl({ url: AppConstants.ROUTE_ORDER_CENTER, params: params }).catch((err: Error) => {
       console.error(`[RouterManager] toOrderCenter failed: ${err.message}`);
     });
   }
@@ -67,6 +111,18 @@ export class RouterManager {
   static toCreditMall(): void {
     router.pushUrl({ url: AppConstants.ROUTE_CREDIT_MALL }).catch((err: Error) => {
       console.error(`[RouterManager] toCreditMall failed: ${err.message}`);
+    });
+  }
+
+  static toEditProfile(): void {
+    router.pushUrl({ url: AppConstants.ROUTE_EDIT_PROFILE }).catch((err: Error) => {
+      console.error(`[RouterManager] toEditProfile failed: ${err.message}`);
+    });
+  }
+
+  static toChangePassword(): void {
+    router.pushUrl({ url: AppConstants.ROUTE_CHANGE_PASSWORD }).catch((err: Error) => {
+      console.error(`[RouterManager] toChangePassword failed: ${err.message}`);
     });
   }
 

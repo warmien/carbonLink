@@ -20,7 +20,7 @@ struct ChatPage {
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
-    const params = router.getParams() as Record<string, Object>;
+    const params = router.getParams() as Record<string, string | number | object>;
     if (params !== undefined && params !== null) {
       this.conversationId = params['conversationId'] !== undefined ? params['conversationId'] as string : '';
       this.targetUserName = params['targetUserName'] !== undefined ? params['targetUserName'] as string : '';

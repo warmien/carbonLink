@@ -52,23 +52,23 @@ export class AIRecognitionService {
         return result;
       }
 
-      let responseData: object;
+      let responseData: Record<string, string | number | boolean | object>;
       if (response.result !== null && response.result !== undefined) {
         const resultStr = response.result as string;
         try {
-          responseData = JSON.parse(resultStr) as object;
+          responseData = JSON.parse(resultStr) as Record<string, string | number | boolean | object>;
         } catch (parseErr) {
-          responseData = response.result as object;
+          responseData = response.result as Record<string, string | number | boolean | object>;
         }
       } else {
         result.errorMessage = '响应内容为空';
         return result;
       }
 
-      const contentStr = JsonPathResolver.resolve(responseData as object, 'choices.0.message.content');
+      const contentStr = JsonPathResolver.resolve(responseData, 'choices.0.message.content');
       if (contentStr) {
         try {
-          const contentObj = JSON.parse(contentStr) as Record<string, Object>;
+          const contentObj = JSON.parse(contentStr) as Record<string, string | number | boolean | object>;
           const nameVal = contentObj['name'];
           const condVal = contentObj['condition'];
           const descVal = contentObj['description'];
@@ -97,8 +97,8 @@ export class AIRecognitionService {
           if (contentStr) result.itemName = contentStr;
         }
       } else {
-        const itemName = JsonPathResolver.resolve(responseData as object, config.responseNamePath);
-        const conditionDesc = JsonPathResolver.resolve(responseData as object, config.responseConditionPath);
+        const itemName = JsonPathResolver.resolve(responseData, config.responseNamePath);
+        const conditionDesc = JsonPathResolver.resolve(responseData, config.responseConditionPath);
         if (itemName) result.itemName = itemName;
         if (conditionDesc) {
           result.condition = conditionDesc;

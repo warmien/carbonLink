@@ -11,7 +11,11 @@ export class AppConstants {
   static readonly ROUTE_CREDIT_LEDGER: string = 'pages/CreditLedgerPage';
   static readonly ROUTE_ECO_ACHIEVEMENT: string = 'pages/EcoAchievementPage';
   static readonly ROUTE_CREDIT_MALL: string = 'pages/CreditMallPage';
-
+  static readonly ROUTE_LOGIN: string = 'pages/LoginPage';
+  static readonly ROUTE_REGISTER: string = 'pages/RegisterPage';
+  static readonly ROUTE_SETTINGS: string = 'pages/SettingsPage';
+  static readonly ROUTE_EDIT_PROFILE: string = 'pages/EditProfilePage';
+  static readonly ROUTE_CHANGE_PASSWORD: string = 'pages/ChangePasswordPage';
 
   static readonly TAB_HOME: number = 0;
   static readonly TAB_CATEGORY: number = 1;
@@ -59,4 +63,7 @@ export class AppConstants {
   static readonly FONT_XL: number = 18;
   static readonly FONT_XXL: number = 22;
   static readonly FONT_TITLE: number = 28;
+
+  static readonly STATUS_BAR_HEIGHT: number = 48;
+  static readonly HOME_INDICATOR_HEIGHT: number = 34;
 }

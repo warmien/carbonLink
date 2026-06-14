@@ -1,4 +1,4 @@
-import { Product } from '../models/Product';
+import { SPU } from '../models/SPU';
 import { Recommendation } from '../models/Recommendation';
 import { productRepository } from '../repository/ProductRepository';
 import { ThemeManager } from '../theme/ThemeManager';
@@ -8,13 +8,14 @@ import { RouterManager } from '../router/RouterManager';
 @Component
 export struct RecommendProductCard {
   @Prop recommendation: Recommendation = new Recommendation();
+  @Prop spu: SPU | null = null;
   @Prop isViewed: boolean = false;
   onDislike?: (productId: string) => void;
 
   build() {
     Column() {
       Stack() {
-        Image(productRepository.getProductById(this.recommendation.productId)?.images[0] || '')
+        Image(this.spu !== null && this.spu.images.length > 0 && this.spu.images[0] !== '' ? this.spu.images[0] : $r('app.media.startIcon'))
           .width('100%')
           .height(120)
           .objectFit(ImageFit.Cover)
@@ -44,14 +45,14 @@ export struct RecommendProductCard {
       .height(120)
 
       Column() {
-        Text(productRepository.getProductById(this.recommendation.productId)?.title || '')
+        Text(this.spu !== null ? this.spu.title : '')
           .fontSize(12)
           .fontColor(ThemeManager.TEXT_PRIMARY)
           .maxLines(1)
           .margin({ top: 6 })
 
         Row() {
-          Text('¥' + (productRepository.getProductById(this.recommendation.productId)?.price || 0))
+          Text('¥' + (this.spu !== null ? this.spu.minPrice.toString() : '0'))
             .fontSize(13)
             .fontColor(ThemeManager.COLOR_PRICE)
             .fontWeight(FontWeight.Medium)

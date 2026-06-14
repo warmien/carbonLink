@@ -58,11 +58,7 @@ struct CreditMallPage {
       .padding({ left: 16, right: 16 })
       .justifyContent(FlexAlign.Center)
 
-      if (this.showRecords) {
-        this.RecordsList()
-      } else {
-        this.ProductGrid()
-      }
+      this.ContentArea()
 
       Row() {
         Text('商品')
@@ -86,6 +82,15 @@ struct CreditMallPage {
     .backgroundColor(ThemeManager.BG_PRIMARY)
     .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
 
+  }
+
+  @Builder
+  ContentArea() {
+    if (this.showRecords) {
+      this.RecordsList()
+    } else {
+      this.ProductGrid()
+    }
   }
 
   @Builder

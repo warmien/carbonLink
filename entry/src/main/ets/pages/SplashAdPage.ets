@@ -2,6 +2,8 @@ import { router } from '@kit.ArkUI';
 import { SplashAdService, SplashAdData } from '../services/SplashAdService';
 import { AppConstants } from '../constants/AppConstants';
 import { ThemeManager } from '../theme/ThemeManager';
+import { AuthManager } from '../services/AuthManager';
+import { TokenManager } from '../services/TokenManager';
 
 @Entry
 @Component
@@ -45,12 +47,27 @@ struct SplashAdPage {
     }, intervalMs);
   }
 
-  private goToMain(): void {
-    router.replaceUrl({
-      url: 'pages/Index'
-    }).catch((err: Error) => {
-      console.error('[SplashAdPage] navigate failed: ' + err.message);
-    });
+  private async goToMain(): Promise<void> {
+    const accessToken: string = await TokenManager.getAccessToken();
+    const refreshToken: string = await TokenManager.getRefreshToken();
+    const cachedUser: string = await TokenManager.getUserInfo();
+    const hasLocalAuth: boolean = accessToken.length > 0 || refreshToken.length > 0;
+
+    if (hasLocalAuth) {
+      AppStorage.setOrCreate('isLoggedIn', true);
+      if (cachedUser.length > 0) {
+        AppStorage.setOrCreate('currentUser', cachedUser);
+      }
+      router.replaceUrl({ url: 'pages/Index' }).catch((err: Error) => {
+        console.error('[SplashAdPage] navigate failed: ' + err.message);
+      });
+      AuthManager.checkAuthOnStartup();
+    } else {
+      AppStorage.setOrCreate('isLoggedIn', false);
+      router.replaceUrl({ url: AppConstants.ROUTE_LOGIN }).catch((err: Error) => {
+        console.error('[SplashAdPage] navigate failed: ' + err.message);
+      });
+    }
   }
 
   private skipAd(): void {

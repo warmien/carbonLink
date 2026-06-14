@@ -1,4 +1,4 @@
-import { Product } from '../models/Product';
+import { SPU } from '../models/SPU';
 import { productRepository } from '../repository/ProductRepository';
 import { AppConstants } from '../constants/AppConstants';
 import { ThemeManager } from '../theme/ThemeManager';
@@ -9,11 +9,23 @@ import { EmptyState } from '../components/EmptyState';
 @Entry
 @Component
 struct MyFavoritesPage {
-  @State products: Product[] = [];
+  @State products: SPU[] = [];
   @State btnScale: number = 1;
+  @State isLoading: boolean = true;
 
   aboutToAppear(): void {
-    this.products = productRepository.getFavoriteProducts();
+    this.loadFavorites();
+  }
+
+  private async loadFavorites(): Promise<void> {
+    this.isLoading = true;
+    try {
+      const result = await productRepository.fetchFavoriteProducts();
+      this.products = result.list;
+    } catch (err) {
+      this.products = [];
+    }
+    this.isLoading = false;
   }
 
   build() {
@@ -38,11 +50,11 @@ struct MyFavoritesPage {
       } else {
         Scroll() {
           Grid() {
-            ForEach(this.products, (product: Product) => {
+            ForEach(this.products, (spu: SPU) => {
               GridItem() {
                 ProductCard({
-                  product: product,
-                  onCardClick: () => RouterManager.toProductDetail(product.id)
+                  product: spu,
+                  onCardClick: () => RouterManager.toProductDetail(spu.id)
                 })
               }
             })

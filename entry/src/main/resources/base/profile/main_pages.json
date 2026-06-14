@@ -2,6 +2,11 @@
   "src": [
     "pages/SplashAdPage",
     "pages/Index",
+    "pages/LoginPage",
+    "pages/RegisterPage",
+    "pages/SettingsPage",
+    "pages/EditProfilePage",
+    "pages/ChangePasswordPage",
     "pages/ProductDetailPage",
     "pages/ChatPage",
     "pages/MyProductsPage",

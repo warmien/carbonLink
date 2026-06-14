@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  carbonlink-server:
+    build: .
+    container_name: carbonlink-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - carbonlink-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_PATH=/app/data/carbonlink.db
+      - ADMIN_DB_PATH=/app/data/carbonlink_admin.db
+      - JWT_SECRET=change_this_to_a_secure_random_string
+
+volumes:
+  carbonlink-data:
+    driver: local

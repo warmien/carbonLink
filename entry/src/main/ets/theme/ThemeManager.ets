@@ -1,8 +1,8 @@
 export class ThemeManager {
   // 主色调 - 绿色 (环保主题)
-  static readonly COLOR_PRIMARY: string = '#00B96B';
-  static readonly COLOR_PRIMARY_LIGHT: string = '#52C997';
-  static readonly COLOR_PRIMARY_DARK: string = '#008A4F';
+  static readonly COLOR_PRIMARY: string = '#5CB8A0';
+  static readonly COLOR_PRIMARY_LIGHT: string = '#8ED4C2';
+  static readonly COLOR_PRIMARY_DARK: string = '#4A9A84';
 
   // 辅助色
   static readonly COLOR_ACCENT: string = '#FF6B35';
@@ -25,10 +25,18 @@ export class ThemeManager {
   static readonly COLOR_PRICE: string = '#FF4D4F';
 
   // 订单状态色
-  static readonly COLOR_STATUS_PENDING: string = '#FAAD14';
-  static readonly COLOR_STATUS_PROCESSING: string = '#1890FF';
+  static readonly COLOR_STATUS_UNPAID: string = '#FAAD14';
+  static readonly COLOR_STATUS_UNSHIPPED: string = '#1890FF';
+  static readonly COLOR_STATUS_SHIPPED: string = '#13C2C2';
   static readonly COLOR_STATUS_COMPLETED: string = '#52C41A';
   static readonly COLOR_STATUS_CANCELLED: string = '#999999';
+  static readonly COLOR_STATUS_PENDING: string = '#FAAD14';
+  static readonly COLOR_STATUS_PROCESSING: string = '#1890FF';
 
   // 阴影 (ArkUI不支持直接shadow，用elevation或border模拟)
+
+  // 圆角 (华为风格大圆角)
+  static readonly RADIUS_SM: number = 8;
+  static readonly RADIUS_MD: number = 16;
+  static readonly RADIUS_LG: number = 24;
 }

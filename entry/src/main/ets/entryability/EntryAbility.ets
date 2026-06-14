@@ -1,6 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { TokenManager } from '../services/TokenManager';
 
 const DOMAIN = 0x0000;
 
@@ -22,12 +23,24 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
-    windowStage.loadContent('pages/SplashAdPage', (err) => {
-      if (err.code !== undefined && err.code !== 0) {
-        hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
-        return;
-      }
-      hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+    TokenManager.init(this.context).then(() => {
+      hilog.info(DOMAIN, 'testTag', 'TokenManager initialized');
+      windowStage.loadContent('pages/SplashAdPage', (err) => {
+        if (err.code !== undefined && err.code !== 0) {
+          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+          return;
+        }
+        hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      });
+    }).catch((err: Error) => {
+      hilog.error(DOMAIN, 'testTag', 'TokenManager init failed: %{public}s', err.message);
+      windowStage.loadContent('pages/SplashAdPage', (err) => {
+        if (err.code !== undefined && err.code !== 0) {
+          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+          return;
+        }
+        hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      });
     });
 
     try {

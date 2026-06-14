@@ -1,3 +1,4 @@
+/** @deprecated 使用 SPU 替代 */
 export class Product {
   id: string = '';
   title: string = '';

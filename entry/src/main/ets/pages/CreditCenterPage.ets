@@ -135,7 +135,7 @@ struct CreditCenterPage {
           Text(this.totalReduction.toFixed(1) + 'kg')
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#5CB8A0')
+            .fontColor(ThemeManager.COLOR_PRIMARY)
             .margin({ top: 2 })
         }
         .layoutWeight(1)

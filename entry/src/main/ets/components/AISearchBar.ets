@@ -1,13 +1,16 @@
 import { AppConstants } from '../constants/AppConstants';
 import { ThemeManager } from '../theme/ThemeManager';
 import { AiBackendConfig } from '../constants/AiBackendConfig';
+import { ApiServiceEndpoint } from '../models/AiServiceConfig';
 import { AISearchService } from '../services/AISearchService';
+import { productRepository } from '../repository/ProductRepository';
 
 @Component
 export struct AISearchBar {
   @Link value: string;
   @State suggestions: string[] = [];
   @State showSuggestions: boolean = false;
+  @State searchMode: string = 'db';
   placeholder: string = '搜索商品、品牌...';
   onSearch?: (keyword: string, productIds: string[]) => void;
   onCameraClick?: () => void;
@@ -20,9 +23,13 @@ export struct AISearchBar {
       if (this.onSearch) this.onSearch(keyword, []);
       return;
     }
-    const config = AiBackendConfig.getSearchConfig();
-    const result = await AISearchService.semanticSearch(keyword, config);
-    if (this.onSearch) this.onSearch(keyword, result.productIds);
+    if (this.searchMode === 'ai') {
+      const config = AiBackendConfig.getSearchConfig();
+      const result = await AISearchService.semanticSearch(keyword, config);
+      if (this.onSearch) this.onSearch(keyword, result.productIds);
+    } else {
+      if (this.onSearch) this.onSearch(keyword, []);
+    }
   }
 
   private async fetchSuggestions(keyword: string): Promise<void> {
@@ -31,10 +38,21 @@ export struct AISearchBar {
       this.showSuggestions = false;
       return;
     }
-    const config = AiBackendConfig.getSearchConfig();
-    const list = await AISearchService.searchSuggest(keyword, config);
-    this.suggestions = list;
-    this.showSuggestions = list.length > 0;
+    if (this.searchMode === 'ai') {
+      const config: ApiServiceEndpoint = AiBackendConfig.getSearchConfig();
+      const list: string[] = await AISearchService.searchSuggest(keyword, config);
+      this.suggestions = list;
+      this.showSuggestions = list.length > 0;
+    } else {
+      try {
+        const result = await productRepository.fetchProducts('keyword=' + encodeURIComponent(keyword));
+        this.suggestions = result.list.map((spu): string => spu.title);
+        this.showSuggestions = this.suggestions.length > 0;
+      } catch (err) {
+        this.suggestions = [];
+        this.showSuggestions = false;
+      }
+    }
   }
 
   private onInputChange(text: string): void {
@@ -96,19 +114,39 @@ export struct AISearchBar {
       .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_XS, bottom: AppConstants.SPACING_XS })
 
       Row() {
-        Text('AI')
-          .fontSize(9)
-          .fontColor(Color.White)
-          .backgroundColor(ThemeManager.COLOR_PRIMARY)
-          .borderRadius(4)
-          .padding({ left: 4, right: 4, top: 1, bottom: 1 })
-          .margin({ right: 4 })
-        Text('智能搜索已启用')
+        if (this.searchMode === 'ai') {
+          Text('AI')
+            .fontSize(9)
+            .fontColor(Color.White)
+            .backgroundColor(ThemeManager.COLOR_PRIMARY)
+            .borderRadius(4)
+            .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+            .margin({ right: 4 })
+          Text('AI智能搜索')
+            .fontSize(AppConstants.FONT_XS)
+            .fontColor(ThemeManager.COLOR_PRIMARY)
+        } else {
+          Text('关键词')
+            .fontSize(9)
+            .fontColor(Color.White)
+            .backgroundColor(ThemeManager.TEXT_HINT)
+            .borderRadius(4)
+            .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+            .margin({ right: 4 })
+          Text('数据库搜索')
+            .fontSize(AppConstants.FONT_XS)
+            .fontColor(ThemeManager.TEXT_HINT)
+        }
+        Blank()
+        Text(this.searchMode === 'ai' ? '切换关键词搜索' : '切换AI搜索')
           .fontSize(AppConstants.FONT_XS)
           .fontColor(ThemeManager.COLOR_PRIMARY)
+          .onClick(() => {
+            this.searchMode = this.searchMode === 'ai' ? 'db' : 'ai';
+          })
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, bottom: 4 })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, bottom: 4 })
 
       if (this.showSuggestions && this.suggestions.length > 0) {
         Column() {

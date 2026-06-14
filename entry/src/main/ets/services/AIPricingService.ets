@@ -38,13 +38,13 @@ export class AIPricingService {
         return result;
       }
 
-      let responseData: object;
+      let responseData: Record<string, string | number | boolean | object>;
       if (response.result !== null && response.result !== undefined) {
         const resultStr = response.result as string;
         try {
-          responseData = JSON.parse(resultStr) as object;
+          responseData = JSON.parse(resultStr) as Record<string, string | number | boolean | object>;
         } catch (parseErr) {
-          responseData = response.result as object;
+          responseData = response.result as Record<string, string | number | boolean | object>;
         }
       } else {
         result.errorMessage = '响应内容为空';
@@ -52,10 +52,10 @@ export class AIPricingService {
       }
 
       const contentStr = JsonPathResolver.resolve(responseData, 'choices.0.message.content');
-      let resolvedData: object = responseData;
+      let resolvedData: Record<string, string | number | boolean | object> = responseData;
       if (contentStr) {
         try {
-          resolvedData = JSON.parse(contentStr) as object;
+          resolvedData = JSON.parse(contentStr) as Record<string, string | number | boolean | object>;
         } catch (parseErr) {
         }
       }

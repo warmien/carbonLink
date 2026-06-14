@@ -1,10 +1,11 @@
-import { Product, ProductStatus } from '../models/Product';
+import { SPU, SPUStatus } from '../models/SPU';
 import { ThemeManager } from '../theme/ThemeManager';
 import { AppConstants } from '../constants/AppConstants';
 
 @Component
 export struct ProductCard {
-  @Prop product: Product;
+  @Prop product: SPU;
+  @Prop skuCount: number = 1;
   @State isPressed: boolean = false;
   onCardClick?: () => void;
 
@@ -17,7 +18,7 @@ export struct ProductCard {
           .objectFit(ImageFit.Cover)
           .borderRadius({ topLeft: AppConstants.RADIUS_MD, topRight: AppConstants.RADIUS_MD })
 
-        if (this.product.status === ProductStatus.SOLD) {
+        if (this.product.status === SPUStatus.SOLD_OUT) {
           Text('已售出')
             .fontSize(AppConstants.FONT_SM)
             .fontColor(Color.White)
@@ -26,11 +27,11 @@ export struct ProductCard {
             .borderRadius(AppConstants.RADIUS_SM)
             .position({ right: 8, bottom: 8 })
         }
-        if (this.product.originalPrice > this.product.price) {
-          Text(`${Math.round((1 - this.product.price / this.product.originalPrice) * 100)}% off`)
+        if (this.skuCount > 1) {
+          Text('多规格')
             .fontSize(AppConstants.FONT_XS)
             .fontColor(Color.White)
-            .backgroundColor(ThemeManager.COLOR_PRICE)
+            .backgroundColor(ThemeManager.COLOR_PRIMARY)
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .borderRadius(AppConstants.RADIUS_SM)
             .position({ left: 8, top: 8 })
@@ -50,15 +51,14 @@ export struct ProductCard {
           Text('¥')
             .fontSize(AppConstants.FONT_XS)
             .fontColor(ThemeManager.COLOR_PRICE)
-          Text(this.product.price.toString())
+          Text(this.product.minPrice.toString())
             .fontSize(AppConstants.FONT_XL)
             .fontWeight(FontWeight.Bold)
             .fontColor(ThemeManager.COLOR_PRICE)
-          if (this.product.originalPrice > 0 && this.product.originalPrice > this.product.price) {
-            Text(`¥${this.product.originalPrice}`)
+          if (this.skuCount > 1) {
+            Text('起')
               .fontSize(AppConstants.FONT_XS)
-              .fontColor(ThemeManager.TEXT_HINT)
-              .decoration({ type: TextDecorationType.LineThrough })
+              .fontColor(ThemeManager.COLOR_PRICE)
           }
           Blank()
           Text(this.product.distance)
@@ -90,8 +90,8 @@ export struct ProductCard {
     .width('100%')
     .backgroundColor(ThemeManager.BG_CARD)
     .borderRadius(AppConstants.RADIUS_MD)
-    .scale({ x: this.isPressed ? 0.96 : 1, y: this.isPressed ? 0.96 : 1 })
-    .animation({ duration: 150, curve: Curve.EaseOut })
+    .scale({ x: this.isPressed ? 0.95 : 1, y: this.isPressed ? 0.95 : 1 })
+    .animation({ duration: 100, curve: Curve.EaseOut })
     .onClick(() => {
       if (this.onCardClick) {
         this.onCardClick();

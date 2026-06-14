@@ -1,20 +1,19 @@
-import { Product, ProductCondition } from '../models/Product';
+import { ProductCondition } from '../models/Product';
+import { SPU } from '../models/SPU';
 import { User } from '../models/User';
 import { Conversation } from '../models/Message';
 
-
 import { productRepository } from '../repository/ProductRepository';
+
 import { userRepository } from '../repository/UserRepository';
 import { messageRepository } from '../repository/MessageRepository';
 import { DateUtils } from '../utils/DateUtils';
 import { ProductCard } from '../components/ProductCard';
 import { AISearchBar } from '../components/AISearchBar';
 import { BannerView } from '../components/BannerView';
-import { UserCard } from '../components/UserCard';
 import { EmptyState } from '../components/EmptyState';
 import { AIRecognitionIndicator } from '../components/AIRecognitionIndicator';
 import { ImagePickerPanel } from '../components/ImagePickerPanel';
-
 import { ThemeManager } from '../theme/ThemeManager';
 import { AppConstants } from '../constants/AppConstants';
 import { AiBackendConfig } from '../constants/AiBackendConfig';
@@ -22,15 +21,25 @@ import { RouterManager } from '../router/RouterManager';
 import { CreditEngine } from '../engine/CreditEngine';
 import { AchievementDetector } from '../engine/AchievementDetector';
 import { DeviceAdapterManager } from '../adaptation/DeviceAdapterManager';
-import { RecommendationEngine } from '../engine/RecommendationEngine';
-import { BehaviorCollector } from '../services/BehaviorCollector';
-import { RecommendSection } from '../components/RecommendSection';
-import { Recommendation } from '../models/Recommendation';
+
 import { ImagePickerService } from '../services/ImagePickerService';
 import { AIRecognitionService } from '../services/AIRecognitionService';
-
-
+import { AuthManager } from '../services/AuthManager';
+import { ObsService } from '../services/ObsService';
 import { promptAction } from '@kit.ArkUI';
+
+class CategoryIdMap {
+  private static names: string[] = ['电子数码', '图书教材', '服装鞋帽', '家居生活', '美妆护肤', '运动户外', '文具办公', '乐器文创', '虚拟服务', '其他闲置'];
+  private static ids: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  static getId(name: string): number {
+    for (let i = 0; i < CategoryIdMap.names.length; i++) {
+      if (CategoryIdMap.names[i] === name) {
+        return CategoryIdMap.ids[i];
+      }
+    }
+    return 0;
+  }
+}
 
 export class CategoryIconItem {
   name: string;
@@ -95,7 +104,7 @@ struct Index {
           Column({ space: 2 }) {
             SymbolGlyph(this.currentTabIndex === 0 ? $r('sys.symbol.house_fill') : $r('sys.symbol.house'))
               .fontSize(24)
-              .fontColor(this.currentTabIndex === 0 ? ['#5CB8A0'] : ['#000000'])
+              .fontColor(this.currentTabIndex === 0 ? [ThemeManager.COLOR_PRIMARY] : ['#000000'])
             Text('首页')
               .fontSize(10)
               .fontColor('#000000')
@@ -113,7 +122,7 @@ struct Index {
           Column({ space: 2 }) {
             SymbolGlyph($r('sys.symbol.leaf_fill'))
               .fontSize(24)
-              .fontColor(this.currentTabIndex === 1 ? ['#5CB8A0'] : ['#000000'])
+              .fontColor(this.currentTabIndex === 1 ? [ThemeManager.COLOR_PRIMARY] : ['#000000'])
             Text('分类')
               .fontSize(10)
               .fontColor('#000000')
@@ -142,7 +151,7 @@ struct Index {
                 .borderRadius(22)
                 .linearGradient({
                   direction: GradientDirection.Bottom,
-                  colors: [['#66C2A5', 0], ['#006D77', 1]]
+                  colors: [[ThemeManager.COLOR_PRIMARY_LIGHT, 0], [ThemeManager.COLOR_PRIMARY_DARK, 1]]
                 })
               Image($r('app.media.ic_publish_icon'))
                 .width(24)
@@ -170,7 +179,7 @@ struct Index {
           Column({ space: 2 }) {
             SymbolGlyph(this.currentTabIndex === 3 ? $r('sys.symbol.message_fill') : $r('sys.symbol.message'))
               .fontSize(24)
-              .fontColor(this.currentTabIndex === 3 ? ['#5CB8A0'] : ['#000000'])
+              .fontColor(this.currentTabIndex === 3 ? [ThemeManager.COLOR_PRIMARY] : ['#000000'])
             Text('消息')
               .fontSize(10)
               .fontColor('#000000')
@@ -188,7 +197,7 @@ struct Index {
           Column({ space: 2 }) {
             SymbolGlyph(this.currentTabIndex === 4 ? $r('sys.symbol.person_fill') : $r('sys.symbol.person'))
               .fontSize(24)
-              .fontColor(this.currentTabIndex === 4 ? ['#5CB8A0'] : ['#000000'])
+              .fontColor(this.currentTabIndex === 4 ? [ThemeManager.COLOR_PRIMARY] : ['#000000'])
             Text('我的')
               .fontSize(10)
               .fontColor('#000000')
@@ -223,148 +232,155 @@ struct Index {
 @Component
 struct HomePageView {
   @State searchKeyword: string = '';
-  @State products: Product[] = [];
-  @State recommendations: Recommendation[] = [];
+  @State products: SPU[] = [];
   @State categoryIcons: CategoryIconItem[] = [];
   @State isFiltered: boolean = false;
   @State isRefreshing: boolean = false;
-  private allProducts: Product[] = [];
+  @State isLoading: boolean = true;
+  private currentQuery: string = '';
 
   aboutToAppear(): void {
-    this.allProducts = productRepository.getProducts();
-    this.products = this.allProducts;
-    this.recommendations = RecommendationEngine.getHomeRecommendations('user_1', 10);
     this.categoryIcons = [
-      new CategoryIconItem('电子产品', $r('sys.symbol.camera_fill'), '#1890FF'),
-      new CategoryIconItem('图书', $r('sys.symbol.doc_text_fill'), '#FAAD14'),
-      new CategoryIconItem('服装', $r('sys.symbol.gift_fill'), '#FF6B35'),
-      new CategoryIconItem('家居', $r('sys.symbol.house_fill'), '#52C41A'),
-      new CategoryIconItem('数码', $r('sys.symbol.camera_fill'), '#722ED1'),
-      new CategoryIconItem('办公', $r('sys.symbol.briefcase_fill'), '#13C2C2'),
+      new CategoryIconItem('电子数码', $r('sys.symbol.camera_fill'), '#1890FF'),
+      new CategoryIconItem('图书教材', $r('sys.symbol.doc_text_fill'), '#FAAD14'),
+      new CategoryIconItem('服装鞋帽', $r('sys.symbol.gift_fill'), '#FF6B35'),
+      new CategoryIconItem('家居生活', $r('sys.symbol.house_fill'), '#52C41A'),
+      new CategoryIconItem('美妆护肤', $r('sys.symbol.star_fill'), '#722ED1'),
+      new CategoryIconItem('运动户外', $r('sys.symbol.heart_fill'), '#13C2C2'),
     ];
+    this.loadProducts();
   }
 
   onPageShow(): void {
     const needRefresh = AppStorage.get<boolean>('needRefreshProducts') ?? false;
     if (needRefresh) {
-      this.allProducts = productRepository.getProducts();
-      this.products = this.isFiltered ? this.products : this.allProducts;
+      this.loadProducts();
       AppStorage.setOrCreate('needRefreshProducts', false);
     }
   }
 
+  private async loadProducts(query?: string): Promise<void> {
+    this.isLoading = true;
+    try {
+      const result = await productRepository.fetchProducts(query);
+      this.products = result.list;
+      this.currentQuery = query || '';
+      this.isFiltered = (query !== undefined && query.length > 0);
+    } catch (err) {
+      this.products = [];
+    }
+    this.isLoading = false;
+  }
+
   build() {
-    Column() {
-      Row() {
-        Blank()
-        Image($r('sys.symbol.qrcode'))
-          .width(22)
-          .height(22)
-          .fillColor(ThemeManager.TEXT_PRIMARY)
+      Column() {
+        Row() {
+          Blank()
+          Image($r('sys.symbol.qrcode'))
+            .width(22)
+            .height(22)
+            .fillColor(ThemeManager.TEXT_PRIMARY)
+        }
+        .width('100%')
+        .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48 })
+
+        AISearchBar({ value: $searchKeyword, onSearch: (kw: string, productIds: string[]) => {
+          if (kw !== '') {
+            this.loadProducts('keyword=' + encodeURIComponent(kw));
+          } else {
+            this.loadProducts();
+          }
+        }})
+
+        Refresh({ refreshing: $$this.isRefreshing }) {
+          Scroll() {
+            Column() {
+              BannerView()
+
+              SectionHeader({ title: '热门分类' })
+              Scroll() {
+                Row({ space: 16 }) {
+                  ForEach(this.categoryIcons, (item: CategoryIconItem) => {
+                    Column({ space: 6 }) {
+                      Image(item.icon)
+                        .width(28)
+                        .height(28)
+                        .fillColor(item.color)
+
+                      Text(item.name)
+                        .fontSize(AppConstants.FONT_XS)
+                        .fontColor(ThemeManager.TEXT_SECONDARY)
+                    }
+                    .onClick(() => {
+                      const catId = CategoryIdMap.getId(item.name);
+                      if (catId > 0) {
+                        this.loadProducts('categoryId=' + catId.toString());
+                      }
+                    })
+                  })
+                }
+                .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 8, bottom: 8 })
+              }
+              .scrollable(ScrollDirection.Horizontal)
+              .scrollBar(BarState.Off)
+              .width('100%')
+
+              Row() {
+                Text('推荐好物')
+                  .fontSize(AppConstants.FONT_LG)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(ThemeManager.TEXT_PRIMARY)
+                Blank()
+                if (this.isFiltered) {
+                  Text('清除筛选')
+                    .fontSize(AppConstants.FONT_SM)
+                    .fontColor(ThemeManager.COLOR_PRIMARY)
+                    .onClick(() => {
+                      this.loadProducts();
+                    })
+                } else {
+                  Text('更多 >')
+                    .fontSize(AppConstants.FONT_SM)
+                    .fontColor(ThemeManager.TEXT_HINT)
+                }
+              }
+              .width('100%')
+              .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_MD, bottom: AppConstants.SPACING_SM })
+
+              if (this.products.length === 0) {
+                EmptyState({ message: '暂无商品' })
+                  .padding({ top: 40, bottom: 80 })
+              } else {
+                Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start, alignContent: FlexAlign.Start }) {
+                  ForEach(this.products, (spu: SPU) => {
+                    ProductCard({
+                      product: spu,
+                      onCardClick: () => RouterManager.toProductDetail(spu.id)
+                    })
+                      .width('47%')
+                      .margin({ left: '1.5%', right: '1.5%', bottom: AppConstants.SPACING_SM })
+                  })
+                }
+                .width('100%')
+                .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG })
+              }
+
+              Blank().height(100)
+            }
+            .width('100%')
+          }
+          .scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring)
+        }
+        .onRefreshing(() => {
+          this.loadProducts(this.currentQuery.length > 0 ? this.currentQuery : undefined).then(() => {
+            this.isRefreshing = false;
+          });
+        })
+        .layoutWeight(1)
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48 })
-
-      AISearchBar({ value: $searchKeyword, onSearch: (kw: string, productIds: string[]) => {
-        if (productIds.length > 0) {
-          const all = productRepository.getProducts();
-          this.products = all.filter((p: Product) => productIds.indexOf(p.id) >= 0);
-          this.isFiltered = true;
-        } else if (kw !== '') {
-          this.products = productRepository.searchProducts(kw);
-          this.isFiltered = true;
-        } else {
-          this.products = this.allProducts;
-          this.isFiltered = false;
-        }
-      }})
-
-      Refresh({ refreshing: $$this.isRefreshing }) {
-        Scroll() {
-          Column({ space: AppConstants.SPACING_LG }) {
-            BannerView()
-
-            SectionHeader({ title: '热门分类' })
-            Scroll() {
-              Row({ space: 16 }) {
-                ForEach(this.categoryIcons, (item: CategoryIconItem) => {
-                  Column({ space: 8 }) {
-                    Column() {
-                      Image(item.icon)
-                        .width(24)
-                        .height(24)
-                        .fillColor(item.color)
-                    }
-                    .width(48)
-                    .height(48)
-                    .borderRadius(AppConstants.RADIUS_LG)
-                    .backgroundColor(item.color + '15')
-                    .justifyContent(FlexAlign.Center)
-
-                    Text(item.name)
-                      .fontSize(AppConstants.FONT_XS)
-                      .fontColor(ThemeManager.TEXT_SECONDARY)
-                  }
-                  .onClick(() => {
-                    this.products = productRepository.getProductsByCategory(item.name);
-                    this.isFiltered = true;
-                  })
-                })
-              }
-              .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 8, bottom: 8 })
-            }
-            .scrollable(ScrollDirection.Horizontal)
-            .scrollBar(BarState.Off)
-            .width('100%')
-
-            Row() {
-              Text('推荐好物')
-                .fontSize(AppConstants.FONT_LG)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(ThemeManager.TEXT_PRIMARY)
-              Blank()
-              if (this.isFiltered) {
-                Text('清除筛选')
-                  .fontSize(AppConstants.FONT_SM)
-                  .fontColor(ThemeManager.COLOR_PRIMARY)
-                  .onClick(() => {
-                    this.products = this.allProducts;
-                    this.isFiltered = false;
-                  })
-              } else {
-                Text('更多 >')
-                  .fontSize(AppConstants.FONT_SM)
-                  .fontColor(ThemeManager.TEXT_HINT)
-              }
-            }
-            .width('100%')
-            .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG })
-            WaterfallGrid({ products: this.products })
-
-            RecommendSection({ title: '为你推荐', recommendations: this.recommendations, isHorizontal: false })
-
-            SectionHeader({ title: '附近闲置' })
-            NearbyProducts({ products: this.products.length > 0 ? this.products.slice(0, 4) : [] })
-
-            Blank().height(120)
-          }
-          .width('100%')
-        }
-        .layoutWeight(1)
-        .scrollBar(BarState.Off)
-      }
-      .onRefreshing(() => {
-        setTimeout(() => {
-          this.allProducts = productRepository.getProducts();
-          this.products = this.allProducts;
-          this.recommendations = RecommendationEngine.getHomeRecommendations('user_1', 10);
-          this.isRefreshing = false;
-        }, 1500);
-      })
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .height('100%')
+      .height('100%')
   }
 }
 
@@ -373,15 +389,27 @@ struct HomePageView {
 struct CategoryPageView {
   @State categories: string[] = AppConstants.CATEGORIES;
   @State selectedCategory: string = AppConstants.CATEGORIES[0];
-  @State products: Product[] = [];
+  @State products: SPU[] = [];
+  @State isLoading: boolean = true;
 
   aboutToAppear(): void {
-    this.products = productRepository.getProductsByCategory(this.selectedCategory);
+    this.loadByCategory(this.selectedCategory);
+  }
+
+  private async loadByCategory(category: string): Promise<void> {
+    this.isLoading = true;
+    const catId = CategoryIdMap.getId(category);
+    try {
+      const result = await productRepository.fetchProducts(catId > 0 ? 'categoryId=' + catId.toString() : undefined);
+      this.products = result.list;
+    } catch (err) {
+      this.products = [];
+    }
+    this.isLoading = false;
   }
 
   build() {
     Column() {
-      // 标题
       Row() {
         Text('分类浏览')
           .fontSize(20)
@@ -392,7 +420,6 @@ struct CategoryPageView {
       .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
 
       Row() {
-        // 左侧分类列表
         List({ space: 0 }) {
           ForEach(this.categories, (cat: string) => {
             ListItem() {
@@ -409,7 +436,7 @@ struct CategoryPageView {
             }
             .onClick(() => {
               this.selectedCategory = cat;
-              this.products = productRepository.getProductsByCategory(cat);
+              this.loadByCategory(cat);
             })
           })
         }
@@ -417,17 +444,16 @@ struct CategoryPageView {
         .height('100%')
         .backgroundColor(ThemeManager.BG_PRIMARY)
 
-        // 右侧商品网格
         Scroll() {
           if (this.products.length === 0) {
             EmptyState({ message: '该分类暂无商品' })
           } else {
             Grid() {
-              ForEach(this.products, (product: Product) => {
+              ForEach(this.products, (spu: SPU) => {
                 GridItem() {
                   ProductCard({
-                    product: product,
-                    onCardClick: () => RouterManager.toProductDetail(product.id)
+                    product: spu,
+                    onCardClick: () => RouterManager.toProductDetail(spu.id)
                   })
                 }
               })
@@ -472,10 +498,13 @@ struct PublishPageView {
   @State recognitionError: string = '';
   @State isRecognizing: boolean = false;
   @State aiRecognizeScale: number = 1;
+  @State isPublishing: boolean = false;
+  @StorageProp('isLoggedIn') isLoggedIn: boolean = false;
 
   private recognizedUris: Set<string> = new Set();
 
   aboutToAppear(): void {
+
   }
 
   private updateCarbonCredits(): void {
@@ -638,6 +667,7 @@ struct PublishPageView {
 
   build() {
     Stack() {
+
     Column() {
       Row() {
         Text('发布闲置')
@@ -654,7 +684,7 @@ struct PublishPageView {
           .padding({ left: 20, right: 20 })
           .enabled(this.title !== '' && this.price !== '' && this.selectedCategory !== '')
           .animation({ duration: 300 })
-          .onClick(() => {
+          .onClick(async () => {
             if (this.title.trim() === '') {
               promptAction.showToast({ message: '请输入商品标题' });
               return;
@@ -677,42 +707,61 @@ struct PublishPageView {
               promptAction.showToast({ message: '原价应大于售价' });
               return;
             }
-            const user = userRepository.getCurrentUser();
-            const product = new Product();
-            product.title = this.title;
-            product.description = this.description;
-            product.price = priceVal;
-            product.originalPrice = origPriceVal;
-            product.category = this.selectedCategory;
-            product.subCategory = this.selectedSubCategory;
-            product.condition = this.selectedCondition;
-            product.carbonReduction = this.calculatedReduction;
-            product.carbonCredits = this.calculatedCredits;
-            product.images = this.images;
-            product.sellerId = user.id;
-            product.sellerName = user.nickname;
-            product.sellerAvatar = user.avatar;
-            product.location = user.location;
-            product.distance = '0km';
-            productRepository.addProduct(product);
-            CreditEngine.onProductPublished(product.id, user.id);
-            AchievementDetector.detect(user.id, 'publish');
-            const toastMsg = this.calculatedCredits > 0 ?
-              '发布成功！+10积分  碳积分+' + this.calculatedCredits :
-              '发布成功！+10积分';
-            promptAction.showToast({ message: toastMsg });
-            this.title = '';
-            this.description = '';
-            this.price = '';
-            this.originalPrice = '';
-            this.selectedCategory = '';
-            this.selectedSubCategory = '';
-            this.selectedCondition = '';
-            this.calculatedCredits = 0;
-            this.calculatedReduction = 0;
-            this.images = [];
-
-            AppStorage.setOrCreate('needRefreshProducts', true);
+            const user = await AuthManager.getCurrentUser();
+            if (!user) {
+              promptAction.showToast({ message: '请先登录' });
+              return;
+            }
+            const catId = CategoryIdMap.getId(this.selectedCategory);
+            const createData: Record<string, string | number | object> = {};
+            createData['title'] = this.title;
+            createData['description'] = this.description;
+            createData['categoryId'] = catId;
+            createData['sellerId'] = user.id;
+            createData['sellerName'] = user.nickname;
+            createData['sellerAvatar'] = user.avatar;
+            createData['location'] = user.location;
+            createData['distance'] = '0km';
+            if (this.images.length > 0) {
+              this.isPublishing = true;
+              const uploadedUrls = await ObsService.uploadImages(this.images);
+              this.isPublishing = false;
+              if (uploadedUrls.length === 0 && this.images.length > 0) {
+                promptAction.showToast({ message: '图片上传失败，请重试' });
+                return;
+              }
+              createData['images'] = uploadedUrls as object;
+            } else {
+              createData['images'] = [] as object;
+            }
+            const skuItem: Record<string, string | number | object> = {};
+            skuItem['price'] = priceVal;
+            skuItem['originalPrice'] = origPriceVal;
+            skuItem['condition'] = this.selectedCondition || '九成新';
+            skuItem['stock'] = 1;
+            createData['skus'] = [skuItem] as object;
+            const spu = await productRepository.createProduct(createData);
+            if (spu) {
+              CreditEngine.onProductPublished(spu.id, user.id);
+              AchievementDetector.detect(user.id, 'publish');
+              const toastMsg = this.calculatedCredits > 0 ?
+                '发布成功！+10积分  碳积分+' + this.calculatedCredits :
+                '发布成功！+10积分';
+              promptAction.showToast({ message: toastMsg });
+              this.title = '';
+              this.description = '';
+              this.price = '';
+              this.originalPrice = '';
+              this.selectedCategory = '';
+              this.selectedSubCategory = '';
+              this.selectedCondition = '';
+              this.calculatedCredits = 0;
+              this.calculatedReduction = 0;
+              this.images = [];
+              AppStorage.setOrCreate('needRefreshProducts', true);
+            } else {
+              promptAction.showToast({ message: '发布失败，请重试' });
+            }
           })
       }
       .width('100%')
@@ -751,11 +800,11 @@ struct PublishPageView {
               .height(26)
               .padding({ left: 12, right: 12 })
               .borderRadius(13)
-              .backgroundColor('#5CB8A0')
+              .backgroundColor(ThemeManager.COLOR_PRIMARY)
             } else {
               Button('AI识别')
                 .fontSize(AppConstants.FONT_XS)
-                .backgroundColor(this.images.length > 0 ? '#5CB8A0' : '#CCCCCC')
+                .backgroundColor(this.images.length > 0 ? ThemeManager.COLOR_PRIMARY : '#CCCCCC')
                 .fontColor(Color.White)
                 .borderRadius(13)
                 .height(26)
@@ -767,9 +816,10 @@ struct PublishPageView {
                   animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.aiRecognizeScale = 0.9; });
                   setTimeout(() => { animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.aiRecognizeScale = 1; }); }, 100);
                   this.reRecognize();
-                })
-            }
-          }
+    })
+  }
+}
+
           .width('100%')
           .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_SM, bottom: AppConstants.SPACING_SM })
 
@@ -839,7 +889,7 @@ struct PublishPageView {
             FormItem({ label: '碳积分' }) {
               Text(this.calculatedCredits > 0 ? '+' + this.calculatedCredits + ' 积分' : '选择分类和成色后计算')
                 .fontSize(AppConstants.FONT_MD)
-                .fontColor(this.calculatedCredits > 0 ? '#5CB8A0' : ThemeManager.TEXT_HINT)
+                .fontColor(this.calculatedCredits > 0 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
                 .fontWeight(this.calculatedCredits > 0 ? FontWeight.Medium : FontWeight.Normal)
                 .layoutWeight(1)
             }
@@ -847,7 +897,7 @@ struct PublishPageView {
             FormItem({ label: '碳减排' }) {
               Text(this.calculatedReduction > 0 ? this.calculatedReduction + ' kg CO₂e' : '选择分类和成色后计算')
                 .fontSize(AppConstants.FONT_MD)
-                .fontColor(this.calculatedReduction > 0 ? '#5CB8A0' : ThemeManager.TEXT_HINT)
+                .fontColor(this.calculatedReduction > 0 ? ThemeManager.COLOR_PRIMARY : ThemeManager.TEXT_HINT)
                 .fontWeight(this.calculatedReduction > 0 ? FontWeight.Medium : FontWeight.Normal)
                 .layoutWeight(1)
             }
@@ -887,6 +937,36 @@ struct PublishPageView {
     .height('100%')
     .backgroundColor(ThemeManager.BG_PRIMARY)
 
+    this.PublishOverlays()
+
+    if (!this.isLoggedIn) {
+      Column() {
+        EmptyState({ icon: $r('sys.symbol.plus_circle_fill'), message: '登录后即可发布闲置' })
+        Button('去登录')
+          .fontSize(14)
+          .fontColor(Color.White)
+          .backgroundColor(ThemeManager.COLOR_PRIMARY)
+          .borderRadius(20)
+          .height(40)
+          .padding({ left: 32, right: 32 })
+          .margin({ top: 16 })
+          .onClick(() => {
+            RouterManager.toLogin();
+          })
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor('rgba(255,255,255,0.95)')
+      .zIndex(1000)
+    }
+
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder PublishOverlays() {
     if (this.showCategoryPicker) {
       this.CategoryPickerDialog()
     }
@@ -896,10 +976,6 @@ struct PublishPageView {
     if (this.showImageSourcePicker) {
       this.ImageSourcePickerDialog()
     }
-
-    }
-    .width('100%')
-    .height('100%')
   }
 
   @Builder CategoryPickerDialog() {
@@ -1099,17 +1175,11 @@ struct PublishPageView {
 
         Row({ space: AppConstants.SPACING_XXL }) {
           Column({ space: 10 }) {
-            Column() {
-              Image($r('sys.symbol.camera_fill'))
-                .width(28)
-                .height(28)
-                .fillColor(ThemeManager.COLOR_PRIMARY)
-            }
-            .width(56)
-            .height(56)
-            .borderRadius(28)
-            .backgroundColor('#E8F8F0')
-            .justifyContent(FlexAlign.Center)
+            Image($r('app.media.ic_gallery_pick'))
+              .width(56)
+              .height(56)
+              .borderRadius(28)
+              .objectFit(ImageFit.Cover)
             Text('从相册选择')
               .fontSize(AppConstants.FONT_MD)
               .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1119,17 +1189,11 @@ struct PublishPageView {
 
           if (DeviceAdapterManager.hasCapability('camera')) {
             Column({ space: 10 }) {
-              Column() {
-                Image($r('sys.symbol.camera_fill'))
-                  .width(28)
-                  .height(28)
-                  .fillColor(ThemeManager.COLOR_PRIMARY)
-              }
-              .width(56)
-              .height(56)
-              .borderRadius(28)
-              .backgroundColor('#E8F8F0')
-              .justifyContent(FlexAlign.Center)
+              Image($r('app.media.ic_camera_pick'))
+                .width(56)
+                .height(56)
+                .borderRadius(28)
+                .objectFit(ImageFit.Cover)
               Text('拍照')
                 .fontSize(AppConstants.FONT_MD)
                 .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1164,15 +1228,19 @@ struct PublishPageView {
     .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.EaseOut }))
     .zIndex(999)
   }
+
 }
 
 // ========== 消息页 ==========
 @Component
 struct MessagePageView {
   @State conversations: Conversation[] = [];
+  @StorageProp('isLoggedIn') isLoggedIn: boolean = false;
 
   aboutToAppear(): void {
-    this.conversations = messageRepository.getConversations();
+    if (this.isLoggedIn) {
+      this.conversations = messageRepository.getConversations();
+    }
   }
 
   build() {
@@ -1186,7 +1254,25 @@ struct MessagePageView {
       .width('100%')
       .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
 
-      if (this.conversations.length === 0) {
+      if (!this.isLoggedIn) {
+        Column() {
+          EmptyState({ icon: $r('sys.symbol.message_fill'), message: '请先登录查看消息' })
+          Button('去登录')
+            .fontSize(14)
+            .fontColor(Color.White)
+            .backgroundColor(ThemeManager.COLOR_PRIMARY)
+            .borderRadius(20)
+            .height(40)
+            .padding({ left: 32, right: 32 })
+            .margin({ top: 16 })
+            .onClick(() => {
+              RouterManager.toLogin();
+            })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      } else if (this.conversations.length === 0) {
         EmptyState({ icon: $r('sys.symbol.message_fill'), message: '暂无消息' })
       } else {
         List({ space: 0 }) {
@@ -1271,16 +1357,54 @@ struct MessagePageView {
 // ========== 个人中心页 ==========
 @Component
 struct ProfilePageView {
-  @State user: User = userRepository.getCurrentUser();
+  @State user: User = new User();
   @State productCount: number = 0;
   @State soldCount: number = 0;
   @State favoriteCount: number = 0;
+  @StorageProp('isLoggedIn') isLoggedIn: boolean = false;
+  @StorageProp('currentUser') @Watch('onUserChanged') currentUserJson: string = '';
 
   aboutToAppear(): void {
-    const user = userRepository.getCurrentUser();
-    this.productCount = productRepository.getProductsBySeller(user.id).length;
-    this.soldCount = user.soldCount;
-    this.favoriteCount = productRepository.getFavoriteProducts().length;
+    this.loadUserData();
+  }
+
+  onUserChanged(): void {
+    this.loadUserData();
+  }
+
+  loadUserData(): void {
+    if (this.isLoggedIn && this.currentUserJson.length > 0) {
+      try {
+        const userObj: Record<string, string | number> = JSON.parse(this.currentUserJson) as Record<string, string | number>;
+        this.user = new User();
+        this.user.id = userObj['id'] as string;
+        this.user.nickname = userObj['nickname'] as string;
+        this.user.avatar = userObj['avatar'] as string;
+        this.user.phone = userObj['phone'] as string;
+        this.user.gender = userObj['gender'] as string;
+        this.user.bio = userObj['bio'] as string;
+        const csVal = userObj['creditScore'];
+        this.user.creditScore = typeof csVal === 'number' ? csVal : 0;
+        this.user.creditLevel = userObj['creditLevel'] as string;
+        const pcVal = userObj['productCount'];
+        this.user.productCount = typeof pcVal === 'number' ? pcVal : 0;
+        const scVal = userObj['soldCount'];
+        this.user.soldCount = typeof scVal === 'number' ? scVal : 0;
+        const fcVal = userObj['followerCount'];
+        this.user.followerCount = typeof fcVal === 'number' ? fcVal : 0;
+        const fgcVal = userObj['followingCount'];
+        this.user.followingCount = typeof fgcVal === 'number' ? fgcVal : 0;
+        this.user.joinDate = userObj['joinDate'] as string;
+        this.user.location = userObj['location'] as string;
+        this.productCount = this.user.productCount;
+        this.soldCount = this.user.soldCount;
+        this.favoriteCount = 0;
+      } catch (err) {
+        this.user = userRepository.getCurrentUser();
+      }
+    } else {
+      this.user = userRepository.getCurrentUser();
+    }
   }
 
   build() {
@@ -1288,57 +1412,102 @@ struct ProfilePageView {
       Column({ space: 12 }) {
         Column() {
           Row({ space: 12 }) {
-            Stack() {
-              Image(this.user.avatar !== '' ? this.user.avatar : $r('sys.symbol.person_crop_circle_fill'))
-                .width(52)
-                .height(52)
-                .borderRadius(26)
-                .objectFit(ImageFit.Cover)
+            if (this.isLoggedIn) {
+              Stack() {
+                Image(this.user.avatar !== '' ? this.user.avatar : $r('sys.symbol.person_crop_circle_fill'))
+                  .width(52)
+                  .height(52)
+                  .borderRadius(26)
+                  .objectFit(ImageFit.Cover)
+              }
+            } else {
+              Stack() {
+                Image($r('sys.symbol.person_crop_circle_fill'))
+                  .width(52)
+                  .height(52)
+                  .borderRadius(26)
+                  .fillColor('#CCCCCC')
+              }
             }
 
-            Column({ space: 6 }) {
-              Row({ space: 8 }) {
-                Text(this.user.nickname)
+            if (this.isLoggedIn) {
+              Column({ space: 6 }) {
+                Row({ space: 8 }) {
+                  Text(this.user.nickname)
+                    .fontSize(18)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor(ThemeManager.TEXT_PRIMARY)
+                    .maxLines(1)
+
+                  Text(`信用：${this.user.creditLevel}`)
+                    .fontSize(11)
+                    .fontColor(ThemeManager.COLOR_PRIMARY)
+                    .backgroundColor('#E8F8F0')
+                    .borderRadius(10)
+                    .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                }
+
+                Row({ space: 16 }) {
+                  Text(`发布 ${this.user.productCount}`)
+                    .fontSize(13)
+                    .fontColor(ThemeManager.TEXT_SECONDARY)
+                  Text(`售出 ${this.user.soldCount}`)
+                    .fontSize(13)
+                    .fontColor(ThemeManager.TEXT_SECONDARY)
+                  Text(`粉丝 ${this.user.followerCount}`)
+                    .fontSize(13)
+                    .fontColor(ThemeManager.TEXT_SECONDARY)
+                }
+
+                Text(this.user.bio)
+                  .fontSize(12)
+                  .fontColor(ThemeManager.TEXT_HINT)
+                  .maxLines(1)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+            } else {
+              Column({ space: 6 }) {
+                Text('点击登录')
                   .fontSize(18)
                   .fontWeight(FontWeight.Bold)
                   .fontColor(ThemeManager.TEXT_PRIMARY)
-                  .maxLines(1)
 
-                Text(`信用：${this.user.creditLevel}`)
-                  .fontSize(11)
-                  .fontColor(ThemeManager.COLOR_PRIMARY)
-                  .backgroundColor('#E8F8F0')
-                  .borderRadius(10)
-                  .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-              }
-
-              Row({ space: 16 }) {
-                Text(`发布 ${this.user.productCount}`)
+                Text('游客模式 · 登录后查看更多信息')
                   .fontSize(13)
-                  .fontColor(ThemeManager.TEXT_SECONDARY)
-                Text(`售出 ${this.user.soldCount}`)
-                  .fontSize(13)
-                  .fontColor(ThemeManager.TEXT_SECONDARY)
-                Text(`粉丝 ${this.user.followerCount}`)
-                  .fontSize(13)
-                  .fontColor(ThemeManager.TEXT_SECONDARY)
-              }
-
-              Text(this.user.bio)
-                .fontSize(12)
-                .fontColor(ThemeManager.TEXT_HINT)
-                .maxLines(1)
+                  .fontColor(ThemeManager.TEXT_HINT)
+                }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+              .onClick(() => {
+                RouterManager.toLogin();
+              })
             }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
 
-            Image($r('sys.symbol.chevron_right'))
-              .width(16)
-              .height(16)
-              .fillColor(ThemeManager.TEXT_HINT)
+            if (this.isLoggedIn) {
+              Image($r('sys.symbol.gearshape_fill'))
+                .width(22)
+                .height(22)
+                .fillColor(ThemeManager.TEXT_SECONDARY)
+                .onClick(() => {
+                  RouterManager.toSettings();
+                })
+            } else {
+              Image($r('sys.symbol.chevron_right'))
+                .width(16)
+                .height(16)
+                .fillColor(ThemeManager.TEXT_HINT)
+            }
           }
           .width('100%')
           .padding(16)
+          .onClick(() => {
+            if (this.isLoggedIn) {
+              RouterManager.toEditProfile();
+            } else {
+              RouterManager.toLogin();
+            }
+          })
         }
         .width('100%')
         .backgroundColor('#F5F7FA')
@@ -1380,7 +1549,7 @@ struct ProfilePageView {
           .layoutWeight(1)
 
           Column({ space: 4 }) {
-            Text('128')
+            Text(this.isLoggedIn ? this.user.followerCount.toString() : '0')
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1418,77 +1587,100 @@ struct ProfilePageView {
           .padding({ left: 16, right: 16, top: 16 })
 
           Row() {
-            Column({ space: 6 }) {
+            Column() {
               Stack() {
                 Column()
-                  .width(40)
-                  .height(40)
-                  .borderRadius(20)
-                  .backgroundColor('#FFF7E6')
-                Image($r('sys.symbol.creditcard_fill'))
-                  .width(20)
-                  .height(20)
-                  .fillColor('#FAAD14')
+                  .width(56).height(56).borderRadius(28)
+                Image($r('app.media.ic_order_unpaid'))
+                  .width(32).height(32)
               }
+              .alignContent(Alignment.Center)
               Text('待付款')
                 .fontSize(12)
                 .fontColor(ThemeManager.TEXT_SECONDARY)
+                .margin({ top: 6 })
             }
             .layoutWeight(1)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => {
+              RouterManager.toOrderCenter(1);
+            })
 
-            Column({ space: 6 }) {
+            Column() {
               Stack() {
                 Column()
-                  .width(40)
-                  .height(40)
-                  .borderRadius(20)
-                  .backgroundColor('#E6F7FF')
-                Image($r('sys.symbol.gift_fill'))
-                  .width(20)
-                  .height(20)
-                  .fillColor('#1890FF')
+                  .width(56).height(56).borderRadius(28)
+                Image($r('app.media.ic_order_unshipped'))
+                  .width(32).height(32)
               }
+              .alignContent(Alignment.Center)
               Text('待发货')
                 .fontSize(12)
                 .fontColor(ThemeManager.TEXT_SECONDARY)
+                .margin({ top: 6 })
             }
             .layoutWeight(1)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => {
+              RouterManager.toOrderCenter(2);
+            })
 
-            Column({ space: 6 }) {
+            Column() {
               Stack() {
                 Column()
-                  .width(40)
-                  .height(40)
-                  .borderRadius(20)
-                  .backgroundColor('#E6FFFB')
-                Image($r('sys.symbol.truck_box_fill'))
-                  .width(20)
-                  .height(20)
-                  .fillColor('#13C2C2')
+                  .width(56).height(56).borderRadius(28)
+                Image($r('app.media.ic_order_shipped'))
+                  .width(32).height(32)
               }
+              .alignContent(Alignment.Center)
               Text('待收货')
                 .fontSize(12)
                 .fontColor(ThemeManager.TEXT_SECONDARY)
+                .margin({ top: 6 })
             }
             .layoutWeight(1)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => {
+              RouterManager.toOrderCenter(3);
+            })
 
-            Column({ space: 6 }) {
+            Column() {
               Stack() {
                 Column()
-                  .width(40)
-                  .height(40)
-                  .borderRadius(20)
-                  .backgroundColor('#F6FFED')
-                Image($r('sys.symbol.checkmark_circle_fill'))
-                  .width(20)
-                  .height(20)
-                  .fillColor('#52C41A')
+                  .width(56).height(56).borderRadius(28)
+                Image($r('app.media.ic_order_completed'))
+                  .width(32).height(32)
               }
+              .alignContent(Alignment.Center)
               Text('已完成')
                 .fontSize(12)
                 .fontColor(ThemeManager.TEXT_SECONDARY)
+                .margin({ top: 6 })
             }
             .layoutWeight(1)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => {
+              RouterManager.toOrderCenter(4);
+            })
+
+            Column() {
+              Stack() {
+                Column()
+                  .width(56).height(56).borderRadius(28)
+                Image($r('app.media.ic_order_cancelled'))
+                  .width(32).height(32)
+              }
+              .alignContent(Alignment.Center)
+              Text('已取消')
+                .fontSize(12)
+                .fontColor(ThemeManager.TEXT_SECONDARY)
+                .margin({ top: 6 })
+            }
+            .layoutWeight(1)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => {
+              RouterManager.toOrderCenter(5);
+            })
           }
           .width('100%')
           .justifyContent(FlexAlign.SpaceAround)
@@ -1609,6 +1801,7 @@ struct ProfilePageView {
     .height('100%')
     .backgroundColor(ThemeManager.BG_PRIMARY)
     .scrollBar(BarState.Off)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }
 
@@ -1686,102 +1879,7 @@ struct CategoryIconGrid {
 }
 
 @Component
-struct WaterfallGrid {
-  @Prop products: Product[];
 
-  build() {
-    if (this.products.length === 0) {
-      EmptyState({ message: '暂无商品' })
-    } else {
-      Grid() {
-        ForEach(this.products, (product: Product) => {
-          GridItem() {
-            ProductCard({
-              product: product,
-              onCardClick: () => RouterManager.toProductDetail(product.id)
-            })
-          }
-        })
-      }
-      .columnsTemplate('1fr 1fr')
-      .columnsGap(AppConstants.SPACING_SM)
-      .rowsGap(AppConstants.SPACING_SM)
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG })
-      .layoutWeight(1)
-    }
-  }
-}
-
-@Component
-struct NearbyProducts {
-  @Prop products: Product[];
-  @State pressedId: string = '';
-
-  build() {
-    Column({ space: AppConstants.SPACING_SM }) {
-      ForEach(this.products, (product: Product) => {
-        Row({ space: AppConstants.SPACING_MD }) {
-          Image(product.images && product.images.length > 0 && product.images[0] !== '' ? product.images[0] : $r('app.media.startIcon'))
-            .width(100)
-            .height(100)
-            .borderRadius(AppConstants.RADIUS_MD)
-            .objectFit(ImageFit.Cover)
-
-          Column({ space: 4 }) {
-            Text(product.title)
-              .fontSize(AppConstants.FONT_MD)
-              .fontColor(ThemeManager.TEXT_PRIMARY)
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Row({ space: 4 }) {
-              Text('¥')
-                .fontSize(AppConstants.FONT_XS)
-                .fontColor(ThemeManager.COLOR_PRICE)
-              Text(product.price.toString())
-                .fontSize(AppConstants.FONT_XL)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(ThemeManager.COLOR_PRICE)
-            }
-            Row() {
-              Text(product.location)
-                .fontSize(AppConstants.FONT_XS)
-                .fontColor(ThemeManager.TEXT_HINT)
-              Text(' · ')
-                .fontSize(AppConstants.FONT_XS)
-                .fontColor(ThemeManager.TEXT_HINT)
-              Text(product.distance)
-                .fontSize(AppConstants.FONT_XS)
-                .fontColor(ThemeManager.TEXT_HINT)
-            }
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Image($r('sys.symbol.chevron_right'))
-            .width(16)
-            .height(16)
-            .fillColor(ThemeManager.TEXT_HINT)
-        }
-        .width('100%')
-        .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_SM, bottom: AppConstants.SPACING_SM })
-        .backgroundColor(this.pressedId === product.id ? ThemeManager.BG_PRIMARY : Color.Transparent)
-        .borderRadius(AppConstants.RADIUS_MD)
-        .animation({ duration: 150 })
-        .onClick(() => RouterManager.toProductDetail(product.id))
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.pressedId = product.id;
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            this.pressedId = '';
-          }
-        })
-      })
-    }
-  }
-}
-
-
-@Component
 struct FormItem {
   @Prop label: string = '';
   @Prop required: boolean = false;

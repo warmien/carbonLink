@@ -45,7 +45,7 @@ export class SyncDataStore {
     if (this.kvStore) {
       try {
         const result = await this.kvStore.get(key);
-        const val = result as string;
+        const val = typeof result === 'string' ? result : String(result);
         this.localCache.set(key, val);
         return val;
       } catch (e) {

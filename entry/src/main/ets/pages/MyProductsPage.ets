@@ -1,6 +1,6 @@
-import { Product } from '../models/Product';
+import { SPU } from '../models/SPU';
 import { productRepository } from '../repository/ProductRepository';
-import { userRepository } from '../repository/UserRepository';
+import { AuthManager } from '../services/AuthManager';
 import { AppConstants } from '../constants/AppConstants';
 import { ThemeManager } from '../theme/ThemeManager';
 import { RouterManager } from '../router/RouterManager';
@@ -10,11 +10,26 @@ import { EmptyState } from '../components/EmptyState';
 @Entry
 @Component
 struct MyProductsPage {
-  @State products: Product[] = [];
+  @State products: SPU[] = [];
   @State btnScale: number = 1;
+  @State isLoading: boolean = true;
 
   aboutToAppear(): void {
-    this.products = productRepository.getProductsBySeller('u000');
+    this.loadMyProducts();
+  }
+
+  private async loadMyProducts(): Promise<void> {
+    this.isLoading = true;
+    const user = await AuthManager.getCurrentUser();
+    if (user) {
+      try {
+        const result = await productRepository.fetchProducts('sellerId=' + user.id);
+        this.products = result.list;
+      } catch (err) {
+        this.products = [];
+      }
+    }
+    this.isLoading = false;
   }
 
   build() {
@@ -39,11 +54,11 @@ struct MyProductsPage {
       } else {
         Scroll() {
           Grid() {
-            ForEach(this.products, (product: Product) => {
+            ForEach(this.products, (spu: SPU) => {
               GridItem() {
                 ProductCard({
-                  product: product,
-                  onCardClick: () => RouterManager.toProductDetail(product.id)
+                  product: spu,
+                  onCardClick: () => RouterManager.toProductDetail(spu.id)
                 })
               }
             })

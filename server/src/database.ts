@@ -1,8 +1,8 @@
-import Database from 'better-sqlite3';
+import Database, { Database as DatabaseType } from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import { AdminRole, AdminStatus } from './models/AdminAccount';
 
-const db = new Database('carbonlink_admin.db');
+const db: DatabaseType = new Database('carbonlink_admin.db');
 
 db.pragma('journal_mode = WAL');
 
