@@ -2,6 +2,7 @@ import { CreditTransaction, CreditTransactionType } from '../models/CreditTransa
 import { creditTransactionRepository } from '../repository/CreditTransactionRepository';
 import { ThemeManager } from '../theme/ThemeManager';
 import { DateUtils } from '../utils/DateUtils';
+import { AppConstants } from '../constants/AppConstants';
 
 @Entry
 @Component
@@ -70,6 +71,7 @@ struct CreditLedgerPage {
       .height(56)
       .padding({ left: 16, right: 16 })
       .justifyContent(FlexAlign.Center)
+      .margin({ top: AppConstants.STATUS_BAR_HEIGHT })
 
       Row({ space: 8 }) {
         ForEach(['all', 'income', 'expense'], (filter: string) => {

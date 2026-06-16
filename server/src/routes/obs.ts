@@ -68,12 +68,15 @@ router.post('/batch-credentials', userAuthMiddleware, (req: Request, res: Respon
     res.json({
       code: 0,
       message: 'success',
-      data: credentials.map((c) => ({
-        uploadUrl: c.uploadUrl,
-        objectKey: c.objectKey,
-        publicUrl: c.publicUrl,
-        headers: c.headers,
-      })),
+      data: {
+        items: credentials.map((c) => ({
+          uploadUrl: c.uploadUrl,
+          objectKey: c.objectKey,
+          publicUrl: c.publicUrl,
+          headers: c.headers,
+        })),
+        count: credentials.length,
+      },
     });
   } catch (e) {
     res.status(400).json({ code: 40002, message: (e as Error).message });

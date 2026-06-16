@@ -3,6 +3,7 @@ import { AuthManager } from '../services/AuthManager';
 import { CaptchaService, CaptchaData } from '../services/CaptchaService';
 import { FormValidator, ValidationResult } from '../utils/FormValidator';
 import { ThemeManager } from '../theme/ThemeManager';
+import { AppConstants } from '../constants/AppConstants';
 
 @Entry
 @Component
@@ -136,6 +137,7 @@ struct RegisterPage {
       .height(56)
       .padding({ left: 16, right: 16 })
       .alignItems(VerticalAlign.Center)
+      .margin({ top: AppConstants.STATUS_BAR_HEIGHT })
 
       Scroll() {
         Column() {

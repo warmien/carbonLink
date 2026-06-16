@@ -43,7 +43,7 @@ struct MyFavoritesPage {
           .margin({ left: AppConstants.SPACING_SM })
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_LG, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.STATUS_BAR_HEIGHT, bottom: AppConstants.SPACING_SM })
 
       if (this.products.length === 0) {
         EmptyState({ icon: $r('sys.symbol.heart_fill'), message: '还没有收藏任何商品', actionText: '去逛逛', onAction: () => RouterManager.back() })

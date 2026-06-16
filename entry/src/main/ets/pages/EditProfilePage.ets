@@ -3,6 +3,7 @@ import { HttpService, ApiResponse } from '../services/HttpService';
 import { AuthManager } from '../services/AuthManager';
 import { ObsService } from '../services/ObsService';
 import { ImagePickerService } from '../services/ImagePickerService';
+import { AppConstants } from '../constants/AppConstants';
 import { ThemeManager } from '../theme/ThemeManager';
 import { promptAction } from '@kit.ArkUI';
 
@@ -186,7 +187,7 @@ struct EditProfilePage {
     Stack() {
       Column() {
 
-        Column().height(48).width('100%')
+        Column().height(AppConstants.STATUS_BAR_HEIGHT).width('100%')
 
         Row() {
           Image($r('sys.symbol.chevron_left'))

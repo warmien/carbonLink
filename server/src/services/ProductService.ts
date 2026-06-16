@@ -150,10 +150,12 @@ export class ProductService {
   static getSPUDetail(spuId: string): SPUWithSKUs | null {
     const spuRow = db.prepare(`
       SELECT s.*, c.name AS category_name, sc.name AS sub_category_name,
+        COALESCE(NULLIF(s.seller_avatar, ''), u.avatar) AS seller_avatar_resolved,
         (SELECT MIN(k.price) FROM sku k WHERE k.spu_id = s.id AND k.status = 'on_sale') AS min_price
       FROM spu s
       LEFT JOIN categories c ON c.id = s.category_id
       LEFT JOIN sub_categories sc ON sc.id = s.sub_category_id
+      LEFT JOIN users u ON u.id = s.seller_id
       WHERE s.id = ?
     `).get(spuId) as Record<string, unknown> | undefined;
 
@@ -162,7 +164,7 @@ export class ProductService {
     db.prepare('UPDATE spu SET view_count = view_count + 1, updated_at = ? WHERE id = ?').run(Date.now(), spuId);
 
     const skuRows = db.prepare(`
-      SELECT k.*, i.available_stock
+      SELECT k.*, COALESCE(i.available_stock, 1) AS available_stock
       FROM sku k
       LEFT JOIN inventory i ON i.sku_id = k.id
       WHERE k.spu_id = ?
@@ -215,6 +217,8 @@ export class ProductService {
       attributeValue: a.attribute_value
     }));
 
+    const sellerAvatar: string = (spuRow.seller_avatar_resolved as string) || '';
+
     const spu: SPUDTO = {
       id: spuRow.id as string,
       title: spuRow.title as string,
@@ -227,7 +231,7 @@ export class ProductService {
       brand: (spuRow.brand as string) || '',
       sellerId: spuRow.seller_id as string,
       sellerName: spuRow.seller_name as string,
-      sellerAvatar: (spuRow.seller_avatar as string) || '',
+      sellerAvatar,
       location: (spuRow.location as string) || '',
       distance: (spuRow.distance as string) || '',
       viewCount: (spuRow.view_count as number) || 0,
@@ -291,10 +295,12 @@ export class ProductService {
 
     const rows = db.prepare(`
       SELECT s.*, c.name AS category_name, sc.name AS sub_category_name,
+        COALESCE(NULLIF(s.seller_avatar, ''), u.avatar) AS seller_avatar_resolved,
         (SELECT MIN(k.price) FROM sku k WHERE k.spu_id = s.id AND k.status = 'on_sale') AS min_price
       FROM spu s
       LEFT JOIN categories c ON c.id = s.category_id
       LEFT JOIN sub_categories sc ON sc.id = s.sub_category_id
+      LEFT JOIN users u ON u.id = s.seller_id
       WHERE ${whereClause}
       ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
@@ -312,7 +318,7 @@ export class ProductService {
       brand: (row.brand as string) || '',
       sellerId: row.seller_id as string,
       sellerName: row.seller_name as string,
-      sellerAvatar: (row.seller_avatar as string) || '',
+      sellerAvatar: (row.seller_avatar_resolved as string) || '',
       location: (row.location as string) || '',
       distance: (row.distance as string) || '',
       viewCount: (row.view_count as number) || 0,
@@ -330,6 +336,17 @@ export class ProductService {
   static updateSPU(spuId: string, updates: Record<string, unknown>): SPUWithSKUs | null {
     const existing = db.prepare('SELECT id, seller_id FROM spu WHERE id = ?').get(spuId) as { id: string; seller_id: string } | undefined;
     if (!existing) return null;
+
+    if (updates['removedImages'] && Array.isArray(updates['removedImages'])) {
+      const removedImages = updates['removedImages'] as string[];
+      for (const url of removedImages) {
+        try {
+          ObsServiceInstance.deleteObjectByUrl(url);
+        } catch (e) {
+          console.error('[ProductService] Failed to delete OBS object:', url, e);
+        }
+      }
+    }
 
     const allowedFields = ['title', 'description', 'images', 'sub_category_id', 'brand', 'location', 'distance', 'tags'];
     const setClauses: string[] = [];
@@ -479,7 +496,7 @@ export class ProductService {
 
   private static getSKUDTO(skuId: string): SKUDTO | null {
     const skuRow = db.prepare(`
-      SELECT k.*, i.available_stock
+      SELECT k.*, COALESCE(i.available_stock, 1) AS available_stock
       FROM sku k
       LEFT JOIN inventory i ON i.sku_id = k.id
       WHERE k.id = ?

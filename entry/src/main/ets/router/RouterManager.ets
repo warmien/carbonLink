@@ -55,14 +55,27 @@ export class RouterManager {
     });
   }
 
-  static toChat(conversationId: string, targetUserName: string, targetUserId: string): void {
+  static toChat(conversationId: string, targetUserName: string, targetUserId: string,
+    productTitle?: string, productImage?: string, targetUserAvatar?: string, productId?: string): void {
+    const params: Record<string, string> = {};
+    params['conversationId'] = conversationId;
+    params['targetUserName'] = targetUserName;
+    params['targetUserId'] = targetUserId;
+    if (productTitle) {
+      params['productTitle'] = productTitle;
+    }
+    if (productImage) {
+      params['productImage'] = productImage;
+    }
+    if (targetUserAvatar) {
+      params['targetUserAvatar'] = targetUserAvatar;
+    }
+    if (productId) {
+      params['productId'] = productId;
+    }
     router.pushUrl({
       url: AppConstants.ROUTE_CHAT,
-      params: {
-        conversationId: conversationId,
-        targetUserName: targetUserName,
-        targetUserId: targetUserId
-      }
+      params: params
     }).catch((err: Error) => {
       console.error(`[RouterManager] toChat failed: ${err.message}`);
     });
@@ -123,6 +136,12 @@ export class RouterManager {
   static toChangePassword(): void {
     router.pushUrl({ url: AppConstants.ROUTE_CHANGE_PASSWORD }).catch((err: Error) => {
       console.error(`[RouterManager] toChangePassword failed: ${err.message}`);
+    });
+  }
+
+  static toBrowseHistory(): void {
+    router.pushUrl({ url: AppConstants.ROUTE_BROWSE_HISTORY }).catch((err: Error) => {
+      console.error(`[RouterManager] toBrowseHistory failed: ${err.message}`);
     });
   }
 

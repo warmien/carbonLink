@@ -2,6 +2,8 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { TokenManager } from '../services/TokenManager';
+import { ObsService } from '../services/ObsService';
+import { WidgetDataProvider } from '../widget/WidgetDataProvider';
 
 const DOMAIN = 0x0000;
 
@@ -23,6 +25,8 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
+    ObsService.init(this.context);
+    WidgetDataProvider.refreshCache().catch(() => {});
     TokenManager.init(this.context).then(() => {
       hilog.info(DOMAIN, 'testTag', 'TokenManager initialized');
       windowStage.loadContent('pages/SplashAdPage', (err) => {

@@ -32,6 +32,7 @@ export interface UserPublicProfile {
   creditLevel: string;
   productCount: number;
   soldCount: number;
+  favoriteCount: number;
   followerCount: number;
   followingCount: number;
   joinDate: string;

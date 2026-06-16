@@ -9,10 +9,23 @@ export struct ProductCard {
   @State isPressed: boolean = false;
   onCardClick?: () => void;
 
+  private getDisplayImage(): string | Resource {
+    if (this.product.images && this.product.images.length > 0) {
+      for (let i = 0; i < this.product.images.length; i++) {
+        const url: string = this.product.images[i];
+        if (url.length > 0 && !url.endsWith('.svg')) {
+          return url;
+        }
+      }
+
+    }
+    return $r('app.media.startIcon');
+  }
+
   build() {
     Column() {
       Stack() {
-        Image(this.product.images && this.product.images.length > 0 && this.product.images[0] !== '' ? this.product.images[0] : $r('app.media.startIcon'))
+        Image(this.getDisplayImage())
           .width('100%')
           .aspectRatio(1)
           .objectFit(ImageFit.Cover)
@@ -60,10 +73,6 @@ export struct ProductCard {
               .fontSize(AppConstants.FONT_XS)
               .fontColor(ThemeManager.COLOR_PRICE)
           }
-          Blank()
-          Text(this.product.distance)
-            .fontSize(AppConstants.FONT_XS)
-            .fontColor(ThemeManager.TEXT_HINT)
         }
         .width('100%')
         .margin({ top: 4, bottom: 2 })
@@ -77,10 +86,6 @@ export struct ProductCard {
             .fontSize(AppConstants.FONT_XS)
             .fontColor(ThemeManager.TEXT_HINT)
             .maxLines(1)
-          Blank()
-          Text(`${this.product.viewCount}浏览`)
-            .fontSize(AppConstants.FONT_XS)
-            .fontColor(ThemeManager.TEXT_HINT)
         }
         .width('100%')
       }

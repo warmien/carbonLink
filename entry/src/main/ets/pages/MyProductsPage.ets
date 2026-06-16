@@ -6,6 +6,7 @@ import { ThemeManager } from '../theme/ThemeManager';
 import { RouterManager } from '../router/RouterManager';
 import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
+import { router } from '@kit.ArkUI';
 
 @Entry
 @Component
@@ -15,6 +16,10 @@ struct MyProductsPage {
   @State isLoading: boolean = true;
 
   aboutToAppear(): void {
+    this.loadMyProducts();
+  }
+
+  onPageShow(): void {
     this.loadMyProducts();
   }
 
@@ -47,7 +52,7 @@ struct MyProductsPage {
           .margin({ left: AppConstants.SPACING_SM })
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_LG, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.STATUS_BAR_HEIGHT, bottom: AppConstants.SPACING_SM })
 
       if (this.products.length === 0) {
         EmptyState({ message: '还没有发布任何商品', actionText: '去发布', onAction: () => RouterManager.back() })
@@ -58,7 +63,9 @@ struct MyProductsPage {
               GridItem() {
                 ProductCard({
                   product: spu,
-                  onCardClick: () => RouterManager.toProductDetail(spu.id)
+                  onCardClick: () => {
+                    router.pushUrl({ url: 'pages/EditProductPage', params: { spuId: spu.id } });
+                  }
                 })
               }
             })
@@ -74,6 +81,7 @@ struct MyProductsPage {
     .width('100%')
     .height('100%')
     .backgroundColor(ThemeManager.BG_PRIMARY)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
   }
 }

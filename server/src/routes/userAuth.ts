@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { UserAuthService } from '../services/UserAuthService';
 import { CaptchaService } from '../services/CaptchaService';
 import { userAuthMiddleware } from '../middleware/userAuth';
+import db from '../businessDatabase';
 
 const router = Router();
 
@@ -116,6 +117,90 @@ router.put('/password', userAuthMiddleware, (req: Request, res: Response): void 
     res.json({ code: 0, message: result.message, data: null });
   } else {
     res.status(400).json({ code: 40001, message: result.message, data: null });
+  }
+});
+
+router.post('/browse', userAuthMiddleware, (req: Request, res: Response): void => {
+  const userId = (req as any).userId;
+  const { targetId, targetCategory } = req.body;
+  if (!targetId) {
+    res.status(400).json({ code: 40001, message: 'targetId不能为空', data: null });
+    return;
+  }
+  try {
+    db.prepare('INSERT INTO user_behaviors (user_id, behavior_type, target_id, target_category, timestamp) VALUES (?, ?, ?, ?, ?)')
+      .run(userId, 'view', targetId, targetCategory || '', Date.now());
+    res.json({ code: 0, message: 'success', data: null });
+  } catch (err) {
+    res.status(500).json({ code: 50001, message: '记录失败', data: null });
+  }
+});
+
+router.get('/browse-history', userAuthMiddleware, (req: Request, res: Response): void => {
+  const userId = (req as any).userId;
+  const page = Number(req.query.page) || 1;
+  const pageSize = Number(req.query.pageSize) || 20;
+  const offset = (page - 1) * pageSize;
+  try {
+    const totalRow = db.prepare('SELECT COUNT(DISTINCT target_id) as c FROM user_behaviors WHERE user_id = ? AND behavior_type = ?').get(userId, 'view') as { c: number };
+    const rows = db.prepare(`
+      SELECT ub.target_id, ub.target_category, ub.timestamp,
+             s.title, s.images, MIN(k.price) as min_price
+      FROM user_behaviors ub
+      LEFT JOIN spu s ON s.id = ub.target_id
+      LEFT JOIN sku k ON k.spu_id = s.id AND k.status = 'on_sale'
+      WHERE ub.user_id = ? AND ub.behavior_type = ?
+      GROUP BY ub.target_id
+      ORDER BY MAX(ub.timestamp) DESC
+      LIMIT ? OFFSET ?
+    `).all(userId, 'view', pageSize, offset) as Record<string, unknown>[];
+    const list = rows.map(r => ({
+      targetId: r.target_id,
+      targetCategory: r.target_category,
+      timestamp: r.timestamp,
+      title: r.title || '',
+      images: r.images ? JSON.parse(r.images as string) : [],
+      minPrice: r.min_price || 0
+    }));
+    res.json({ code: 0, message: 'success', data: { list, total: totalRow.c } });
+  } catch (err) {
+    res.status(500).json({ code: 50001, message: '查询失败', data: null });
+  }
+});
+
+router.get('/browse-count', userAuthMiddleware, (req: Request, res: Response): void => {
+  const userId = (req as any).userId;
+  try {
+    const row = db.prepare('SELECT COUNT(DISTINCT target_id) as c FROM user_behaviors WHERE user_id = ? AND behavior_type = ?').get(userId, 'view') as { c: number };
+    res.json({ code: 0, message: 'success', data: { count: row.c } });
+  } catch (err) {
+    res.status(500).json({ code: 50001, message: '查询失败', data: null });
+  }
+});
+
+router.get('/stats', userAuthMiddleware, (req: Request, res: Response): void => {
+  const userId = (req as any).userId;
+  try {
+    const prodRow = db.prepare('SELECT COUNT(*) as c FROM spu WHERE seller_id = ?').get(userId) as { c: number };
+    const productCount = prodRow.c;
+
+    const soldRow = db.prepare("SELECT COUNT(*) as c FROM spu WHERE seller_id = ? AND status = 'sold_out'").get(userId) as { c: number };
+    const soldCount = soldRow.c;
+
+    const favRow = db.prepare('SELECT COUNT(*) as c FROM favorites WHERE user_id = ?').get(userId) as { c: number };
+    const favoriteCount = favRow.c;
+
+    const browseRow = db.prepare('SELECT COUNT(DISTINCT target_id) as c FROM user_behaviors WHERE user_id = ? AND behavior_type = ?').get(userId, 'view') as { c: number };
+    const browseCount = browseRow.c;
+
+    const creditRow = db.prepare('SELECT balance, total_earned, level FROM credit_accounts WHERE user_id = ?').get(userId) as { balance: number; total_earned: number; level: string } | undefined;
+    const creditBalance = creditRow ? creditRow.balance : 0;
+    const totalEarned = creditRow ? creditRow.total_earned : 0;
+    const creditLevel = creditRow ? creditRow.level : '环保新手';
+
+    res.json({ code: 0, message: 'success', data: { productCount, soldCount, favoriteCount, browseCount, creditBalance, totalEarned, creditLevel } });
+  } catch (err) {
+    res.status(500).json({ code: 50001, message: '查询失败', data: null });
   }
 });
 

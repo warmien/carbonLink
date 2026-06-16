@@ -1,0 +1,17 @@
+const Database = require('better-sqlite3');
+const db = new Database('C:/Users/warminen/DevEcoStudioProjects/CarbonLink/server/data/carbonlink.db');
+const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+console.log('Tables:', tables.map(t => t.name).join(', '));
+const views = db.prepare("SELECT name FROM sqlite_master WHERE type='view' ORDER BY name").all();
+console.log('Views:', views.map(v => v.name).join(', '));
+const specNames = db.prepare('SELECT * FROM spec_names').all();
+console.log('SpecNames:', specNames.length, specNames.map(s => s.name).join(', '));
+const specValues = db.prepare('SELECT * FROM spec_values').all();
+console.log('SpecValues:', specValues.length);
+const attrNames = db.prepare('SELECT * FROM attribute_names').all();
+console.log('AttrNames:', attrNames.length, attrNames.map(a => a.name).join(', '));
+const catSpecs = db.prepare('SELECT * FROM category_spec_names').all();
+console.log('CategorySpecs:', catSpecs.length);
+const catAttrs = db.prepare('SELECT * FROM category_attributes').all();
+console.log('CategoryAttrs:', catAttrs.length);
+db.close();

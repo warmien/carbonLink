@@ -200,6 +200,8 @@ export class UserAuthService {
 
     if (!row) return null;
 
+    const favRow = db.prepare('SELECT COUNT(*) as c FROM favorites WHERE user_id = ?').get(userId) as { c: number };
+
     return {
       id: row.id,
       nickname: row.nickname,
@@ -211,6 +213,7 @@ export class UserAuthService {
       creditLevel: row.credit_level,
       productCount: row.product_count,
       soldCount: row.sold_count,
+      favoriteCount: favRow.c,
       followerCount: row.follower_count,
       followingCount: row.following_count,
       joinDate: row.join_date,

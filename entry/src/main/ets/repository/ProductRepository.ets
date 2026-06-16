@@ -22,28 +22,14 @@ export class ProductDetailResult {
   attributes: ProductAttribute[] = [];
 }
 
-function toStr(val: string | number | object | undefined): string {
-  if (typeof val === 'string') return val;
-  if (typeof val === 'number') return val.toString();
-  return '';
-}
-
-function toNum(val: string | number | object | undefined): number {
-  if (typeof val === 'number') return val;
-  if (typeof val === 'string') {
-    const n = parseFloat(val);
-    return isNaN(n) ? 0 : n;
-  }
-  return 0;
-}
-
-function toBool(val: string | number | object | undefined): boolean {
+function toBool(val: string | number | boolean | object | undefined): boolean {
+  if (typeof val === 'boolean') return val;
   if (typeof val === 'number') return val !== 0;
   if (typeof val === 'string') return val === 'true' || val === '1';
   return false;
 }
 
-function toStrArr(val: string | number | object | undefined): string[] {
+function toStrArr(val: string | number | boolean | object | undefined): string[] {
   if (val === undefined) {
     return [];
   }
@@ -52,6 +38,21 @@ function toStrArr(val: string | number | object | undefined): string[] {
     return arr.map((item: string | number | boolean | object): string => String(item));
   }
   return [];
+}
+
+function toNum(val: string | number | boolean | object | undefined): number {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const n = parseFloat(val);
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
+function toStr(val: string | number | boolean | object | undefined): string {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return val.toString();
+  return '';
 }
 
 function toObjArr(val: string | number | object | undefined): Record<string, string | number | object>[] {

@@ -21,3 +21,19 @@ server/data/
 server/.env
 server/stdout.log
 server/stderr.log
+server/*.db
+server/*.db-shm
+server/*.db-wal
+server/*.log
+server/*.txt
+server/out*.txt
+server/err*.txt
+server/server_*.log
+server/server_*.err
+
+# Admin
+admin/node_modules/
+admin/dist/
+
+# Spec
+.spec/

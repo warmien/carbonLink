@@ -1,6 +1,24 @@
 import { AppConstants } from '../constants/AppConstants';
 import { ThemeManager } from '../theme/ThemeManager';
 
+export class ImageDisplayUtil {
+  static getDisplaySrc(url: string): string | Resource {
+    if (url.length === 0) {
+      return $r('app.media.startIcon');
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.startsWith('file://') || url.startsWith('content://') || url.startsWith('internal://')) {
+      return url;
+    }
+    if (url.endsWith('.svg')) {
+      return $r('app.media.startIcon');
+    }
+    return $r('app.media.startIcon');
+  }
+}
+
 @Component
 export struct ImagePickerPanel {
   @Link images: string[];
@@ -15,7 +33,7 @@ export struct ImagePickerPanel {
         Row({ space: AppConstants.SPACING_SM }) {
           ForEach(this.images, (img: string, index: number) => {
             Stack() {
-              Image(img.startsWith('file://') || img.startsWith('content://') || img.startsWith('internal://') ? img : $r('app.media.startIcon'))
+              Image(ImageDisplayUtil.getDisplaySrc(img))
                 .width(80)
                 .height(80)
                 .borderRadius(AppConstants.RADIUS_MD)
@@ -44,19 +62,23 @@ export struct ImagePickerPanel {
 
           if (this.images.length < this.maxCount) {
             Column() {
-              Text('+')
-                .fontSize(36)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(ThemeManager.COLOR_PRIMARY)
+              Image($r('sys.symbol.plus_circle_fill'))
+                .width(28)
+                .height(28)
+                .fillColor(ThemeManager.COLOR_PRIMARY)
+              Text('添加图片')
+                .fontSize(10)
+                .fontColor(ThemeManager.TEXT_HINT)
+                .margin({ top: 2 })
             }
-            .width(100)
-            .height(100)
+            .width(84)
+            .height(84)
             .borderRadius(AppConstants.RADIUS_MD)
             .border({ width: 1.5, color: ThemeManager.COLOR_PRIMARY, style: BorderStyle.Dashed })
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
             .scale({ x: this.isAddPressed ? 0.95 : 1, y: this.isAddPressed ? 0.95 : 1 })
-            .animation({ duration: 150, curve: Curve.EaseOut })
+            .animation({ duration: 100, curve: Curve.EaseOut })
             .onClick(() => {
               if (this.onImageAdd) {
                 this.onImageAdd();

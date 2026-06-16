@@ -43,9 +43,34 @@ export class FavoriteService {
       WHERE f.user_id = ?
       ORDER BY f.created_at DESC
       LIMIT ? OFFSET ?
-    `).all(userId, pageSize, offset) as object[];
+    `).all(userId, pageSize, offset) as Record<string, unknown>[];
 
-    return { list: rows, total };
+    const list = rows.map(row => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      images: typeof row.images === 'string' ? JSON.parse(row.images) : row.images,
+      categoryId: row.category_id,
+      subCategoryId: row.sub_category_id,
+      categoryName: row.category_name || '',
+      subCategoryName: row.sub_category_name || '',
+      brand: row.brand,
+      sellerId: row.seller_id,
+      sellerName: row.seller_name,
+      sellerAvatar: row.seller_avatar,
+      location: row.location,
+      distance: row.distance,
+      viewCount: row.view_count,
+      favoriteCount: row.favorite_count,
+      status: row.status,
+      tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      minPrice: row.min_price || 0,
+      favoritedAt: row.favorited_at
+    }));
+
+    return { list, total };
   }
 
   static isFavorited(userId: string, spuId: string): boolean {

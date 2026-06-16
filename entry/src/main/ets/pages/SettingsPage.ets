@@ -44,7 +44,7 @@ struct SettingsPage {
 
   build() {
     Column() {
-      Column().height(48).width('100%')
+      Column().height(AppConstants.STATUS_BAR_HEIGHT).width('100%')
 
       Row() {
         Image($r('sys.symbol.chevron_left'))

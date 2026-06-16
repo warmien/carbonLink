@@ -87,7 +87,7 @@ db.exec(`
     completed_at INTEGER DEFAULT 0,
     shipping_method TEXT DEFAULT '',
     tracking_number TEXT DEFAULT '',
-    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (product_id) REFERENCES spu(id),
     FOREIGN KEY (buyer_id) REFERENCES users(id),
     FOREIGN KEY (seller_id) REFERENCES users(id)
   );
@@ -101,6 +101,10 @@ db.exec(`
     id TEXT PRIMARY KEY,
     user1_id TEXT NOT NULL,
     user2_id TEXT NOT NULL,
+    user1_name TEXT NOT NULL DEFAULT '',
+    user1_avatar TEXT DEFAULT '',
+    user2_name TEXT NOT NULL DEFAULT '',
+    user2_avatar TEXT DEFAULT '',
     target_user_id TEXT NOT NULL,
     target_user_name TEXT NOT NULL,
     target_user_avatar TEXT DEFAULT '',
@@ -108,13 +112,14 @@ db.exec(`
     last_message_time INTEGER DEFAULT 0,
     unread_count_user1 INTEGER DEFAULT 0,
     unread_count_user2 INTEGER DEFAULT 0,
+    product_id TEXT NOT NULL DEFAULT '',
     product_title TEXT DEFAULT '',
     product_image TEXT DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     FOREIGN KEY (user1_id) REFERENCES users(id),
     FOREIGN KEY (user2_id) REFERENCES users(id),
-    UNIQUE(user1_id, user2_id)
+    UNIQUE(user1_id, user2_id, product_id)
   );
 
   CREATE INDEX IF NOT EXISTS idx_conversations_user1 ON conversations(user1_id);

@@ -2,6 +2,7 @@ import { HttpService, ApiResponse } from './HttpService';
 import { TokenManager } from './TokenManager';
 import { User } from '../models/User';
 import { router } from '@kit.ArkUI';
+import { WsChatService } from './WsChatService';
 
 export class AuthManager {
   static async login(phone: string, password: string, captchaKey: string,
@@ -37,6 +38,7 @@ export class AuthManager {
   }
 
   static async logout(): Promise<void> {
+    WsChatService.disconnect();
     try {
       await HttpService.POST('/logout');
     } catch (err) {
@@ -59,6 +61,7 @@ export class AuthManager {
           AppStorage.setOrCreate('currentUser', cachedUser);
         }
         await AuthManager.fetchUserProfile();
+        WsChatService.connect(accessToken);
         return true;
       }
     }
@@ -73,6 +76,8 @@ export class AuthManager {
           AppStorage.setOrCreate('currentUser', cachedUser);
         }
         await AuthManager.fetchUserProfile();
+        const newAccessToken: string = await TokenManager.getAccessToken();
+        WsChatService.connect(newAccessToken);
         return true;
       }
 
@@ -115,6 +120,10 @@ export class AuthManager {
       user.followingCount = typeof fgc === 'number' ? fgc : 0;
       user.joinDate = userObj['joinDate'] as string;
       user.location = userObj['location'] as string;
+      const favc = userObj['favoriteCount'];
+      if (typeof favc === 'number') {
+        user.favoriteCount = favc;
+      }
       return user;
     } catch (err) {
       return null;
@@ -133,6 +142,7 @@ export class AuthManager {
       'creditLevel': user.creditLevel,
       'productCount': user.productCount,
       'soldCount': user.soldCount,
+      'favoriteCount': user.favoriteCount,
       'followerCount': user.followerCount,
       'followingCount': user.followingCount,
       'joinDate': user.joinDate,
@@ -163,6 +173,8 @@ export class AuthManager {
     }
 
     AppStorage.setOrCreate('isLoggedIn', true);
+
+    WsChatService.connect(accessToken);
   }
 
   private static async fetchUserProfile(): Promise<void> {

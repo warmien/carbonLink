@@ -1,7 +1,7 @@
 import { ProductCondition } from '../models/Product';
 import { SPU } from '../models/SPU';
 import { User } from '../models/User';
-import { Conversation } from '../models/Message';
+import { Conversation, WsConnectionState } from '../models/Message';
 
 import { productRepository } from '../repository/ProductRepository';
 
@@ -26,6 +26,9 @@ import { ImagePickerService } from '../services/ImagePickerService';
 import { AIRecognitionService } from '../services/AIRecognitionService';
 import { AuthManager } from '../services/AuthManager';
 import { ObsService } from '../services/ObsService';
+import { HttpService } from '../services/HttpService';
+
+import { ConversationItem } from '../views/message/ConversationItem';
 import { promptAction } from '@kit.ArkUI';
 
 class CategoryIdMap {
@@ -153,9 +156,9 @@ struct Index {
                   direction: GradientDirection.Bottom,
                   colors: [[ThemeManager.COLOR_PRIMARY_LIGHT, 0], [ThemeManager.COLOR_PRIMARY_DARK, 1]]
                 })
-              Image($r('app.media.ic_publish_icon'))
-                .width(24)
-                .height(24)
+              SymbolGlyph($r('sys.symbol.plus'))
+                .fontSize(24)
+                .fontColor([Color.White])
             }
             .width(52)
             .height(52)
@@ -257,6 +260,8 @@ struct HomePageView {
       this.loadProducts();
       AppStorage.setOrCreate('needRefreshProducts', false);
     }
+    const seq = AppStorage.get<number>('statsRefreshSeq') ?? 0;
+    AppStorage.setOrCreate('statsRefreshSeq', seq + 1);
   }
 
   private async loadProducts(query?: string): Promise<void> {
@@ -282,7 +287,7 @@ struct HomePageView {
             .fillColor(ThemeManager.TEXT_PRIMARY)
         }
         .width('100%')
-        .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48 })
+        .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.STATUS_BAR_HEIGHT })
 
         AISearchBar({ value: $searchKeyword, onSearch: (kw: string, productIds: string[]) => {
           if (kw !== '') {
@@ -417,7 +422,7 @@ struct CategoryPageView {
           .fontColor(ThemeManager.TEXT_PRIMARY)
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.STATUS_BAR_HEIGHT, bottom: AppConstants.SPACING_SM })
 
       Row() {
         List({ space: 0 }) {
@@ -726,9 +731,12 @@ struct PublishPageView {
               this.isPublishing = true;
               const uploadedUrls = await ObsService.uploadImages(this.images);
               this.isPublishing = false;
-              if (uploadedUrls.length === 0 && this.images.length > 0) {
+              if (uploadedUrls.length === 0) {
                 promptAction.showToast({ message: '图片上传失败，请重试' });
                 return;
+              }
+              if (uploadedUrls.length < this.images.length) {
+                promptAction.showToast({ message: `已上传${uploadedUrls.length}/${this.images.length}张图片` });
               }
               createData['images'] = uploadedUrls as object;
             } else {
@@ -759,13 +767,14 @@ struct PublishPageView {
               this.calculatedReduction = 0;
               this.images = [];
               AppStorage.setOrCreate('needRefreshProducts', true);
+
             } else {
               promptAction.showToast({ message: '发布失败，请重试' });
             }
           })
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.STATUS_BAR_HEIGHT, bottom: AppConstants.SPACING_SM })
 
       Scroll() {
         Column({ space: 0 }) {
@@ -1236,10 +1245,119 @@ struct PublishPageView {
 struct MessagePageView {
   @State conversations: Conversation[] = [];
   @StorageProp('isLoggedIn') isLoggedIn: boolean = false;
+  @State isLoading: boolean = false;
+  @State loadFailed: boolean = false;
+  @StorageProp('wsConvUpdatePayload') @Watch('onConvUpdate') wsConvUpdatePayload: string = '';
+  @StorageProp('wsNewMessagePayload') @Watch('onNewMsg') wsNewMsgPayload: string = '';
 
   aboutToAppear(): void {
     if (this.isLoggedIn) {
-      this.conversations = messageRepository.getConversations();
+      this.loadConversations();
+    }
+  }
+
+  async loadConversations(): Promise<void> {
+    this.isLoading = true;
+    this.loadFailed = false;
+    try {
+      const result: Conversation[] = await messageRepository.getConversations();
+      this.conversations = result;
+    } catch (err) {
+      this.loadFailed = true;
+    }
+    this.isLoading = false;
+  }
+
+  onConvUpdate(): void {
+    if (this.wsConvUpdatePayload.length === 0) return;
+    try {
+      const payload: Record<string, string | number | object> = JSON.parse(this.wsConvUpdatePayload) as Record<string, string | number | object>;
+      const dataRaw: string | number | object = payload['data'];
+      if (typeof dataRaw !== 'object' || dataRaw === null) return;
+      const data: Record<string, string | number | object> = dataRaw as Record<string, string | number | object>;
+      const updatedConv: Conversation = new Conversation();
+      updatedConv.id = data['id'] as string;
+      updatedConv.targetUserId = data['targetUserId'] as string;
+      updatedConv.targetUserName = data['targetUserName'] as string;
+      updatedConv.targetUserAvatar = typeof data['targetUserAvatar'] === 'string' ? data['targetUserAvatar'] as string : '';
+      updatedConv.productId = typeof data['productId'] === 'string' ? data['productId'] as string : '';
+      updatedConv.productTitle = typeof data['productTitle'] === 'string' ? data['productTitle'] as string : '';
+      updatedConv.productImage = typeof data['productImage'] === 'string' ? data['productImage'] as string : '';
+      updatedConv.lastMessage = typeof data['lastMessage'] === 'string' ? data['lastMessage'] as string : '';
+      updatedConv.lastMessageTime = typeof data['lastMessageTime'] === 'number' ? data['lastMessageTime'] as number : 0;
+      updatedConv.unreadCount = typeof data['unreadCount'] === 'number' ? data['unreadCount'] as number : 0;
+
+      const idx: number = this.findConversationIndex(updatedConv.id);
+      if (idx >= 0) {
+        this.conversations[idx] = updatedConv;
+      } else {
+        this.conversations.splice(0, 0, updatedConv);
+      }
+      this.sortConversations();
+      this.refreshTotalUnread();
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  onNewMsg(): void {
+    if (this.wsNewMsgPayload.length === 0) return;
+    try {
+      const payload: Record<string, string | number | object> = JSON.parse(this.wsNewMsgPayload) as Record<string, string | number | object>;
+      const dataRaw: string | number | object = payload['data'];
+      if (typeof dataRaw !== 'object' || dataRaw === null) return;
+      const data: Record<string, string | number | object> = dataRaw as Record<string, string | number | object>;
+      const convId: string = data['conversationId'] as string;
+      const idx: number = this.findConversationIndex(convId);
+      if (idx >= 0) {
+        const conv: Conversation = this.conversations[idx];
+        conv.lastMessage = typeof data['content'] === 'string' ? data['content'] as string : '';
+        conv.lastMessageTime = typeof data['timestamp'] === 'number' ? data['timestamp'] as number : Date.now();
+        const senderId: string = data['senderId'] as string;
+        if (senderId !== this.getCurrentUserId()) {
+          conv.unreadCount = conv.unreadCount + 1;
+        }
+        this.sortConversations();
+        this.refreshTotalUnread();
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  findConversationIndex(convId: string): number {
+    for (let i = 0; i < this.conversations.length; i++) {
+      if (this.conversations[i].id === convId) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  sortConversations(): void {
+    const sorted: Conversation[] = [...this.conversations];
+    sorted.sort((a: Conversation, b: Conversation) => b.lastMessageTime - a.lastMessageTime);
+    this.conversations = sorted;
+  }
+
+  refreshTotalUnread(): void {
+    let total: number = 0;
+    for (let i = 0; i < this.conversations.length; i++) {
+      total += this.conversations[i].unreadCount;
+    }
+    AppStorage.setOrCreate('totalUnread', total);
+  }
+
+  getCurrentUserId(): string {
+    const userJson: string = AppStorage.get<string>('currentUser') || '';
+    if (userJson.length === 0) {
+      return '';
+    }
+    try {
+      const userObj: Record<string, string | number> = JSON.parse(userJson) as Record<string, string | number>;
+      return userObj['id'] as string;
+    } catch (err) {
+      return '';
     }
   }
 
@@ -1252,7 +1370,7 @@ struct MessagePageView {
           .fontColor(ThemeManager.TEXT_PRIMARY)
       }
       .width('100%')
-      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: 48, bottom: AppConstants.SPACING_SM })
+      .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.STATUS_BAR_HEIGHT, bottom: AppConstants.SPACING_SM })
 
       if (!this.isLoggedIn) {
         Column() {
@@ -1272,74 +1390,36 @@ struct MessagePageView {
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
+      } else if (this.isLoading) {
+        Column() {
+          LoadingProgress()
+            .width(40)
+            .height(40)
+            .color(ThemeManager.COLOR_PRIMARY)
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      } else if (this.loadFailed) {
+        Column() {
+          Text('加载失败，点击重试')
+            .fontSize(AppConstants.FONT_MD)
+            .fontColor(ThemeManager.TEXT_SECONDARY)
+            .onClick(() => {
+              this.loadConversations();
+            })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
       } else if (this.conversations.length === 0) {
         EmptyState({ icon: $r('sys.symbol.message_fill'), message: '暂无消息' })
       } else {
         List({ space: 0 }) {
           ForEach(this.conversations, (conv: Conversation) => {
             ListItem() {
-              Row({ space: AppConstants.SPACING_MD }) {
-                // 头像
-                Stack() {
-                  Image(conv.targetUserAvatar !== '' ? conv.targetUserAvatar : $r('sys.symbol.person_crop_circle_fill'))
-                    .width(48)
-                    .height(48)
-                    .borderRadius(24)
-                    .objectFit(ImageFit.Cover)
-
-                  if (conv.unreadCount > 0) {
-                    Text(conv.unreadCount > 99 ? '99+' : conv.unreadCount.toString())
-                      .fontSize(10)
-                      .fontColor(Color.White)
-                      .backgroundColor(ThemeManager.COLOR_PRICE)
-                      .borderRadius(10)
-                      .width(conv.unreadCount > 9 ? 20 : 16)
-                      .height(16)
-                      .textAlign(TextAlign.Center)
-                      .position({ right: -6, top: -4 })
-                  }
-                }
-
-                // 会话信息
-                Column({ space: 4 }) {
-                  Row() {
-                    Text(conv.targetUserName)
-                      .fontSize(AppConstants.FONT_LG)
-                      .fontWeight(FontWeight.Medium)
-                      .fontColor(ThemeManager.TEXT_PRIMARY)
-                      .maxLines(1)
-                      .layoutWeight(1)
-                    Text(DateUtils.formatTimeAgo(conv.lastMessageTime))
-                      .fontSize(AppConstants.FONT_XS)
-                      .fontColor(ThemeManager.TEXT_HINT)
-                  }
-                  .width('100%')
-
-                  Row({ space: 6 }) {
-                    Text(conv.productTitle)
-                      .fontSize(AppConstants.FONT_XS)
-                      .fontColor(ThemeManager.COLOR_PRIMARY)
-                      .backgroundColor('rgba(0,185,107,0.08)')
-                      .borderRadius(AppConstants.RADIUS_SM)
-                      .padding({ left: 6, right: 6, top: 1, bottom: 1 })
-                      .maxLines(1)
-                    Text(conv.lastMessage)
-                      .fontSize(AppConstants.FONT_SM)
-                      .fontColor(ThemeManager.TEXT_HINT)
-                      .maxLines(1)
-                      .layoutWeight(1)
-                  }
-                  .width('100%')
-                }
-                .layoutWeight(1)
-                .alignItems(HorizontalAlign.Start)
-              }
-              .width('100%')
-              .padding({ left: AppConstants.SPACING_LG, right: AppConstants.SPACING_LG, top: AppConstants.SPACING_MD, bottom: AppConstants.SPACING_MD })
+              ConversationItem({ conversation: conv })
             }
-            .onClick(() => {
-              RouterManager.toChat(conv.id, conv.targetUserName, conv.targetUserId);
-            })
           })
         }
         .layoutWeight(1)
@@ -1361,15 +1441,38 @@ struct ProfilePageView {
   @State productCount: number = 0;
   @State soldCount: number = 0;
   @State favoriteCount: number = 0;
+  @State browseCount: number = 0;
   @StorageProp('isLoggedIn') isLoggedIn: boolean = false;
   @StorageProp('currentUser') @Watch('onUserChanged') currentUserJson: string = '';
+  @StorageProp('statsRefreshSeq') @Watch('onStatsRefreshSeq') statsRefreshSeq: number = 0;
+  private statsTimer: number = -1;
 
   aboutToAppear(): void {
     this.loadUserData();
+    this.startStatsTimer();
+  }
+
+  aboutToDisappear(): void {
+    if (this.statsTimer !== -1) {
+      clearInterval(this.statsTimer);
+      this.statsTimer = -1;
+    }
   }
 
   onUserChanged(): void {
     this.loadUserData();
+  }
+
+  onStatsRefreshSeq(): void {
+    this.loadUserStats();
+  }
+
+  private startStatsTimer(): void {
+    this.statsTimer = setInterval(() => {
+      if (this.isLoggedIn) {
+        this.loadUserStats();
+      }
+    }, 5000) as number;
   }
 
   loadUserData(): void {
@@ -1386,19 +1489,15 @@ struct ProfilePageView {
         const csVal = userObj['creditScore'];
         this.user.creditScore = typeof csVal === 'number' ? csVal : 0;
         this.user.creditLevel = userObj['creditLevel'] as string;
-        const pcVal = userObj['productCount'];
-        this.user.productCount = typeof pcVal === 'number' ? pcVal : 0;
-        const scVal = userObj['soldCount'];
-        this.user.soldCount = typeof scVal === 'number' ? scVal : 0;
+        this.user.productCount = 0;
+        this.user.soldCount = 0;
         const fcVal = userObj['followerCount'];
         this.user.followerCount = typeof fcVal === 'number' ? fcVal : 0;
         const fgcVal = userObj['followingCount'];
         this.user.followingCount = typeof fgcVal === 'number' ? fgcVal : 0;
         this.user.joinDate = userObj['joinDate'] as string;
         this.user.location = userObj['location'] as string;
-        this.productCount = this.user.productCount;
-        this.soldCount = this.user.soldCount;
-        this.favoriteCount = 0;
+        this.loadUserStats();
       } catch (err) {
         this.user = userRepository.getCurrentUser();
       }
@@ -1406,6 +1505,23 @@ struct ProfilePageView {
       this.user = userRepository.getCurrentUser();
     }
   }
+
+  async loadUserStats(): Promise<void> {
+    try {
+      const resp = await HttpService.GET('/stats');
+      if (resp.code === 0 && resp.data !== null) {
+        const data: Record<string, string | number | object> = resp.data;
+        this.productCount = typeof data['productCount'] === 'number' ? data['productCount'] as number : 0;
+        this.soldCount = typeof data['soldCount'] === 'number' ? data['soldCount'] as number : 0;
+        this.favoriteCount = typeof data['favoriteCount'] === 'number' ? data['favoriteCount'] as number : 0;
+        this.browseCount = typeof data['browseCount'] === 'number' ? data['browseCount'] as number : 0;
+      }
+    } catch (err) {
+      this.productCount = this.user.productCount;
+      this.soldCount = this.user.soldCount;
+    }
+  }
+
 
   build() {
     Scroll() {
@@ -1448,10 +1564,10 @@ struct ProfilePageView {
                 }
 
                 Row({ space: 16 }) {
-                  Text(`发布 ${this.user.productCount}`)
+                  Text(`发布 ${this.productCount}`)
                     .fontSize(13)
                     .fontColor(ThemeManager.TEXT_SECONDARY)
-                  Text(`售出 ${this.user.soldCount}`)
+                  Text(`售出 ${this.soldCount}`)
                     .fontSize(13)
                     .fontColor(ThemeManager.TEXT_SECONDARY)
                   Text(`粉丝 ${this.user.followerCount}`)
@@ -1525,6 +1641,11 @@ struct ProfilePageView {
               .fontColor(ThemeManager.TEXT_SECONDARY)
           }
           .layoutWeight(1)
+          .onClick(() => {
+            if (this.isLoggedIn) {
+              RouterManager.toMyProducts();
+            }
+          })
 
           Column({ space: 4 }) {
             Text(this.soldCount.toString())
@@ -1536,6 +1657,11 @@ struct ProfilePageView {
               .fontColor(ThemeManager.TEXT_SECONDARY)
           }
           .layoutWeight(1)
+          .onClick(() => {
+            if (this.isLoggedIn) {
+              RouterManager.toOrderCenter(4);
+            }
+          })
 
           Column({ space: 4 }) {
             Text(this.favoriteCount.toString())
@@ -1547,9 +1673,14 @@ struct ProfilePageView {
               .fontColor(ThemeManager.TEXT_SECONDARY)
           }
           .layoutWeight(1)
+          .onClick(() => {
+            if (this.isLoggedIn) {
+              RouterManager.toMyFavorites();
+            }
+          })
 
           Column({ space: 4 }) {
-            Text(this.isLoggedIn ? this.user.followerCount.toString() : '0')
+            Text(this.browseCount.toString())
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1558,6 +1689,11 @@ struct ProfilePageView {
               .fontColor(ThemeManager.TEXT_SECONDARY)
           }
           .layoutWeight(1)
+          .onClick(() => {
+            if (this.isLoggedIn) {
+              RouterManager.toBrowseHistory();
+            }
+          })
         }
         .width('100%')
         .backgroundColor(ThemeManager.BG_CARD)

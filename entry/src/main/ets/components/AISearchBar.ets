@@ -70,10 +70,9 @@ export struct AISearchBar {
     Column() {
       Row() {
         Row({ space: 8 }) {
-          Image($r('app.media.ic_search'))
-            .width(18)
-            .height(18)
-            .fillColor(ThemeManager.TEXT_HINT)
+          SymbolGlyph($r('sys.symbol.magnifyingglass'))
+            .fontSize(18)
+            .fontColor([ThemeManager.TEXT_HINT])
 
           TextInput({ text: this.value, placeholder: this.placeholder })
             .fontSize(AppConstants.FONT_MD)

@@ -64,6 +64,7 @@ struct CreditCenterPage {
       .height(56)
       .padding({ left: 16, right: 16 })
       .justifyContent(FlexAlign.Center)
+      .margin({ top: AppConstants.STATUS_BAR_HEIGHT })
 
       Scroll() {
         Column({ space: 16 }) {
@@ -178,13 +179,13 @@ struct CreditCenterPage {
         .margin({ bottom: 12 })
 
       Row() {
-        this.ActionItem('积分流水', '#1890FF', () => {
+        this.ActionItem('积分流水', '#1890FF', $r('sys.symbol.list_bullet'), () => {
           RouterManager.toCreditLedger();
         })
-        this.ActionItem('环保成就', '#52C41A', () => {
+        this.ActionItem('环保成就', '#52C41A', $r('sys.symbol.leaf'), () => {
           RouterManager.toEcoAchievement();
         })
-        this.ActionItem('积分商城', '#FAAD14', () => {
+        this.ActionItem('积分商城', '#FAAD14', $r('sys.symbol.gift'), () => {
           RouterManager.toCreditMall();
         })
       }
@@ -198,12 +199,11 @@ struct CreditCenterPage {
   }
 
   @Builder
-  ActionItem(label: string, color: string, action: () => void) {
+  ActionItem(label: string, color: string, icon: Resource, action: () => void) {
     Column() {
-      Circle()
-        .width(44)
-        .height(44)
-        .fill(color)
+      SymbolGlyph(icon)
+        .fontSize(28)
+        .fontColor([color])
       Text(label)
         .fontSize(12)
         .fontColor(ThemeManager.TEXT_SECONDARY)

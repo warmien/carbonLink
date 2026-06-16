@@ -1,24 +1,14 @@
 import { Recommendation, RecStrategy } from '../models/Recommendation';
-import { UserProfile } from '../models/UserProfile';
-import { userProfileRepository } from '../repository/UserProfileRepository';
-import { behaviorRepository } from '../repository/BehaviorRepository';
-import { productRepository } from '../repository/ProductRepository';
+import { SPU } from '../models/SPU';
+import { productRepository, SPUListResult } from '../repository/ProductRepository';
 import { RecommendationConfig } from '../config/RecommendationConfig';
-import { Product } from '../models/Product';
 
 export class RecommendationEngine {
-  static getHomeRecommendations(userId: string, limit: number): Recommendation[] {
+  static async getHomeRecommendations(userId: string, limit: number): Promise<Recommendation[]> {
     try {
-      const hasProfile = userProfileRepository.hasProfile(userId);
-      if (!hasProfile) {
-        return RecommendationEngine.coldStartRecommend(limit);
-      }
-
-      const profile = userProfileRepository.getProfile(userId);
-      const allProducts = productRepository.getProducts();
-      const disliked = behaviorRepository.getDislikedProductIds(userId);
-      const candidates = allProducts.filter((p: Product): boolean =>
-        p.status === 'selling' && p.sellerId !== userId && disliked.indexOf(p.id) === -1
+      const result: SPUListResult = await productRepository.fetchProducts();
+      const candidates: SPU[] = result.list.filter((spu: SPU): boolean =>
+        spu.status === 'on_sale' && spu.sellerId !== userId
       );
 
       const scored: Recommendation[] = [];
@@ -28,18 +18,15 @@ export class RecommendationEngine {
         let reason = '';
         let strategy = RecStrategy.POPULARITY;
 
-        const contentScore = RecommendationEngine.contentScore(p, profile);
         const popScore = RecommendationEngine.popularityScore(p);
+        score = popScore * RecommendationConfig.WEIGHT_POPULARITY;
 
-        score = contentScore * RecommendationConfig.WEIGHT_CONTENT +
-          popScore * RecommendationConfig.WEIGHT_POPULARITY;
-
-        if (contentScore > 0.3) {
-          reason = '因为你浏览过' + p.category + '类商品';
-          strategy = RecStrategy.CONTENT_BASED;
-        } else {
+        if (popScore > 0.3) {
           reason = '热门好物';
           strategy = RecStrategy.POPULARITY;
+        } else {
+          reason = '为你精选';
+          strategy = RecStrategy.COLD_START;
         }
 
         const rec = new Recommendation();
@@ -59,63 +46,61 @@ export class RecommendationEngine {
     }
   }
 
-  static getSimilarRecommendations(productId: string, userId: string, limit: number): Recommendation[] {
-    const current = productRepository.getProductById(productId);
-    if (!current) return [];
+  static async getSimilarRecommendations(productId: string, userId: string, limit: number): Promise<Recommendation[]> {
+    try {
+      const detailResult = await productRepository.getProductDetail(productId);
+      if (!detailResult) return [];
 
-    const allProducts = productRepository.getProducts();
-    const disliked = behaviorRepository.getDislikedProductIds(userId);
-    const similar = allProducts.filter((p: Product): boolean =>
-      p.id !== productId && p.sellerId !== userId && p.status === 'selling' &&
-      p.category === current.category && disliked.indexOf(p.id) === -1
-    );
+      const currentSpu = detailResult.spu;
+      const result: SPUListResult = await productRepository.fetchProducts('categoryId=' + currentSpu.categoryId.toString());
+      const similar = result.list.filter((spu: SPU): boolean =>
+        spu.id !== productId && spu.sellerId !== userId && spu.status === 'on_sale'
+      );
 
-    const results: Recommendation[] = [];
-    for (let i = 0; i < similar.length && i < limit; i++) {
-      const rec = new Recommendation();
-      rec.productId = similar[i].id;
-      rec.score = 1.0 - Math.abs(similar[i].price - current.price) / (current.price + 1);
-      rec.reason = '与你浏览的商品相似';
-      rec.strategy = RecStrategy.CONTENT_BASED;
-      results.push(rec);
-    }
-    results.sort((a: Recommendation, b: Recommendation): number => b.score - a.score);
-    return results;
-  }
-
-  private static coldStartRecommend(limit: number): Recommendation[] {
-    const allProducts = productRepository.getProducts();
-    const popular = allProducts.filter((p: Product): boolean => p.status === 'selling');
-    popular.sort((a: Product, b: Product): number => b.viewCount - a.viewCount);
-
-    const results: Recommendation[] = [];
-    for (let i = 0; i < popular.length && i < limit; i++) {
-      const rec = new Recommendation();
-      rec.productId = popular[i].id;
-      rec.score = 1.0 - i * 0.05;
-      rec.reason = '为你精选';
-      rec.strategy = RecStrategy.COLD_START;
-      results.push(rec);
-    }
-    return results;
-  }
-
-  private static contentScore(product: Product, profile: UserProfile): number {
-    for (let i = 0; i < profile.preferredCategories.length; i++) {
-      if (profile.preferredCategories[i].category === product.category) {
-        return profile.preferredCategories[i].weight;
+      const results: Recommendation[] = [];
+      for (let i = 0; i < similar.length && i < limit; i++) {
+        const rec = new Recommendation();
+        rec.productId = similar[i].id;
+        rec.score = 1.0 - Math.abs(similar[i].minPrice - currentSpu.minPrice) / (currentSpu.minPrice + 1);
+        rec.reason = '与你浏览的商品相似';
+        rec.strategy = RecStrategy.CONTENT_BASED;
+        results.push(rec);
       }
+      results.sort((a: Recommendation, b: Recommendation): number => b.score - a.score);
+      return results;
+    } catch (e) {
+      return [];
     }
-    return 0;
   }
 
-  private static popularityScore(product: Product): number {
+  private static async coldStartRecommend(limit: number): Promise<Recommendation[]> {
+    try {
+      const result: SPUListResult = await productRepository.fetchProducts();
+      const popular = result.list.filter((spu: SPU): boolean => spu.status === 'on_sale');
+      popular.sort((a: SPU, b: SPU): number => b.viewCount - a.viewCount);
+
+      const results: Recommendation[] = [];
+      for (let i = 0; i < popular.length && i < limit; i++) {
+        const rec = new Recommendation();
+        rec.productId = popular[i].id;
+        rec.score = 1.0 - i * 0.05;
+        rec.reason = '为你精选';
+        rec.strategy = RecStrategy.COLD_START;
+        results.push(rec);
+      }
+      return results;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  private static popularityScore(spu: SPU): number {
     const maxViews = 1000;
-    return Math.min(product.viewCount / maxViews, 1.0);
+    return Math.min(spu.viewCount / maxViews, 1.0);
   }
 
-  private static ensureDiversity(scored: Recommendation[], candidates: Product[]): Recommendation[] {
-    const productMap = new Map<string, Product>();
+  private static ensureDiversity(scored: Recommendation[], candidates: SPU[]): Recommendation[] {
+    const productMap = new Map<string, SPU>();
     for (let i = 0; i < candidates.length; i++) {
       productMap.set(candidates[i].id, candidates[i]);
     }
@@ -124,11 +109,12 @@ export class RecommendationEngine {
     for (let i = 0; i < scored.length; i++) {
       const p = productMap.get(scored[i].productId);
       if (!p) continue;
-      const list = categoryGroups.get(p.category);
+      const catName = p.categoryName;
+      const list = categoryGroups.get(catName);
       if (list) {
         list.push(scored[i]);
       } else {
-        categoryGroups.set(p.category, [scored[i]]);
+        categoryGroups.set(catName, [scored[i]]);
       }
     }
 

@@ -86,6 +86,12 @@ class ObsServiceInstance {
     }
     return null;
   }
+
+  deleteObjectByUrl(publicUrl: string): boolean {
+    const objectKey = this.extractObjectKey(publicUrl);
+    if (!objectKey) return false;
+    return this.deleteObject(objectKey);
+  }
 }
 
 export const ObsService = new ObsServiceInstance();

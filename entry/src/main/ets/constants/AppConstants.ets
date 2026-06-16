@@ -16,6 +16,8 @@ export class AppConstants {
   static readonly ROUTE_SETTINGS: string = 'pages/SettingsPage';
   static readonly ROUTE_EDIT_PROFILE: string = 'pages/EditProfilePage';
   static readonly ROUTE_CHANGE_PASSWORD: string = 'pages/ChangePasswordPage';
+  static readonly ROUTE_BROWSE_HISTORY: string = 'pages/BrowseHistoryPage';
+  static readonly ROUTE_EDIT_PRODUCT: string = 'pages/EditProductPage';
 
   static readonly TAB_HOME: number = 0;
   static readonly TAB_CATEGORY: number = 1;
@@ -66,4 +68,10 @@ export class AppConstants {
 
   static readonly STATUS_BAR_HEIGHT: number = 48;
   static readonly HOME_INDICATOR_HEIGHT: number = 34;
+
+  static readonly WS_URL: string = 'ws://192.168.10.55:3001/ws/chat';
+  static readonly WS_PING_INTERVAL: number = 30000;
+  static readonly WS_RECONNECT_DELAYS: number[] = [1000, 2000, 4000, 8000, 16000];
+  static readonly WS_MAX_RECONNECT_DELAY: number = 30000;
+  static readonly CHAT_PAGE_SIZE: number = 20;
 }

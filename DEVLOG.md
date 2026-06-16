@@ -6,7 +6,7 @@
 **项目定位**：HarmonyOS NEXT 原生应用 — 校园二手闲置交易平台  
 **技术栈**：ArkTS + ArkUI + Stage Model + MVVM  
 **仓库地址**：https://github.com/warmien/carbonLink.git  
-**当前版本**：V9 种子数据+OBS联调完成版
+**当前版本**：V11 实时聊天功能
 
 ---
 
@@ -318,6 +318,67 @@
 
 ---
 
+## V9.2：购买流程实现（商品下架+支付方式选择）
+
+### 后端修改
+
+| 文件 | 变更 |
+|------|------|
+| `server/src/businessDatabase.ts` | orders表外键修复：`product_id` REFERENCES `spu(id)`（原为products(id)） |
+| `server/src/services/OrderService.ts` | **新建** 订单服务：创建订单+SKU标记sold_out+SPU全部售完标记sold_out+卖家sold_count+1 |
+| `server/src/routes/order.ts` | **新建** 订单路由：POST / 创建订单、GET /buyer 买家订单、GET /seller 卖家订单、PUT /:id/confirm 确认收货、PUT /:id/ship 发货 |
+| `server/src/index.ts` | 注册 `/api/v1/orders` 路由 |
+
+### 前端修改
+
+| 文件 | 变更 |
+|------|------|
+| `entry/src/main/ets/pages/ProductDetailPage.ets` | "立即购买"按钮：点击弹出支付方式选择弹窗（微信/支付宝）；调用POST /orders API；购买成功后商品状态改为sold_out+按钮变"已售出"灰显；不能购买自己商品校验；已下架商品禁用购买 |
+
+### 购买流程
+
+1. 点击"立即购买" → 弹出支付方式选择（微信支付/支付宝）
+2. 选择支付方式 → 调用 `POST /api/v1/orders`
+3. 后端事务：创建订单 + SKU状态→sold_out + 若所有SKU售完则SPU状态→sold_out + 卖家sold_count+1
+4. 前端：购买成功后刷新商品状态，按钮变为"已售出"灰显不可点击
+5. 校验：不能购买自己发布的商品、商品不存在或已下架报错
+
+---
+
+## V9.1：个人中心统计项功能完善
+
+### 后端修改
+
+| 文件 | 变更 |
+|------|------|
+| `server/src/models/User.ts` | UserPublicProfile 新增 `favoriteCount` 字段 |
+| `server/src/services/UserAuthService.ts` | `getPublicProfile()` 查询 favorites 表获取收藏数 |
+| `server/src/routes/userAuth.ts` | 新增3个浏览记录API：`POST /browse` 记录浏览、`GET /browse-history` 浏览历史列表、`GET /browse-count` 浏览计数 |
+
+### 前端修改
+
+| 文件 | 变更 |
+|------|------|
+| `entry/src/main/ets/models/User.ets` | User 新增 `favoriteCount` 字段 |
+| `entry/src/main/ets/services/AuthManager.ets` | `getCurrentUser()` 解析 favoriteCount；`updateUserProfile()` 序列化 favoriteCount |
+| `entry/src/main/ets/pages/Index.ets` | ProfilePageView：新增 `browseCount` 状态+`loadBrowseCount()` 异步获取；`favoriteCount` 从API获取（非硬编码0）；"浏览记录"显示 `browseCount`（非 followerCount）；"我的发布"点击跳转 MyProductsPage；"我的收藏"点击跳转 MyFavoritesPage；"浏览记录"点击跳转 BrowseHistoryPage；导入 HttpService |
+| `entry/src/main/ets/pages/ProductDetailPage.ets` | 商品详情加载时调用 `POST /browse` 记录浏览行为；导入 HttpService/AuthManager |
+| `entry/src/main/ets/pages/BrowseHistoryPage.ets` | **新建** 浏览记录页面，调用 `/browse-history` API，展示商品列表+点击跳转详情 |
+| `entry/src/main/ets/constants/AppConstants.ets` | 新增 `ROUTE_BROWSE_HISTORY` 路由常量 |
+| `entry/src/main/ets/router/RouterManager.ets` | 新增 `toBrowseHistory()` 路由方法 |
+| `entry/src/main/resources/base/profile/main_pages.json` | 注册 BrowseHistoryPage |
+
+### 四个统计项功能说明
+
+| 统计项 | 数据来源 | 点击跳转 |
+|--------|----------|----------|
+| 我的发布 | `user.productCount`（后端users表） | MyProductsPage |
+| 已售出 | `user.soldCount`（后端users表） | 无跳转 |
+| 我的收藏 | `user.favoriteCount`（后端favorites表COUNT） | MyFavoritesPage |
+| 浏览记录 | `/browse-count` API（后端user_behaviors表COUNT） | BrowseHistoryPage |
+
+---
+
 ## GitHub 提交记录
 
 | 时间 | Commit | 说明 |
@@ -458,11 +519,59 @@ OBS_BUCKET=your-bucket-name
 
 ---
 
+## V10：OBS图片上传修复 + 图片显示重构
+
+### 问题根因
+
+1. **OBS上传失败**：`fs.openSync()` 无法直接打开 PhotoViewPicker 返回的 `file://media/` 格式URI，需要先拷贝到沙箱目录
+2. **种子数据SVG不显示**：HarmonyOS Image组件不支持SVG格式
+3. **编辑页图片添加无响应**：`ImagePickerService` 缺少错误日志，无法定位问题
+4. **商品详情页图片空白**：SVG URL直接传给Image组件无法渲染
+5. **库存为0时购买按钮未禁用**：仅检查spu.status，未检查sku.availableStock
+
+### 修改文件
+
+| 文件 | 变更 |
+|------|------|
+| `entry/src/main/ets/services/ObsService.ets` | 新增 `context`/`init()`/`copyToSandbox()`；`uploadFileToObs()` 判断媒体URI自动拷贝到沙箱再上传；上传后清理临时文件 |
+| `entry/src/main/ets/entryability/EntryAbility.ets` | `onWindowStageCreate` 中调用 `ObsService.init(this.context)` |
+| `entry/src/main/ets/services/ImagePickerService.ets` | 添加 hilog 日志，记录选图结果和错误信息 |
+| `entry/src/main/ets/components/ImagePickerPanel.ets` | 新增 `ImageDisplayUtil` 工具类统一图片显示逻辑；支持远程URL/本地URI/SVG过滤；添加按钮改为图标+文字 |
+| `entry/src/main/ets/pages/EditProductPage.ets` | 全面重构：使用 `ImageDisplayUtil` 显示图片；`handlePickImages()` 手动构建新数组（避免concat）；`removeImage()` 手动构建数组；添加按钮缩放反馈动画 |
+| `entry/src/main/ets/pages/ProductDetailPage.ets` | Swiper图片使用 `ImageDisplayUtil.getDisplaySrc()`；新增 `getAvailableStock()` 方法；购买按钮增加库存检查（库存0显示"已售罄"灰显） |
+| `entry/src/main/ets/pages/Index.ets` | 发布页：部分图片上传失败时提示已上传数量；`uploadedUrls.length === 0` 阻止提交 |
+| `entry/src/main/ets/components/ProductCard.ets` | `getDisplayImage()` SVG图片返回占位图而非SVG URL |
+| `entry/src/main/ets/components/RecommendProductCard.ets` | `getDisplayImage()` 返回 `string \| Resource`，SVG返回占位图 |
+| `entry/src/main/ets/pages/BrowseHistoryPage.ets` | `getDisplayImage()` SVG返回占位图 |
+| `entry/src/main/ets/widget/WidgetDataProvider.ets` | `getDisplayImage()` SVG返回空字符串；`this.getDisplayImage()` → `WidgetDataProvider.getDisplayImage()` |
+| `server/scripts/seed-direct.js` | 种子数据图片URL从 `.svg` 改为 `.png` |
+
+### 数据库变更
+
+- 20条种子商品图片从SVG替换为PNG占位图（已上传OBS并更新数据库）
+- 删除3条错误测试数据（images为 `["img1.jpg","img2.jpg"]`）
+- 删除2条空图片测试数据
+
+### OBS上传修复方案
+
+1. PhotoViewPicker 返回 `file://media/Photo/xxx` 格式URI
+2. `copyToSandbox()` 使用 `fs.copyFileSync()` 将媒体文件拷贝到 `context.cacheDir`
+3. 从沙箱路径读取文件内容并上传到OBS
+4. 上传完成后 `fs.unlinkSync()` 清理临时文件
+5. 非媒体URI（如沙箱路径）直接读取上传
+
+---
+
 ## 待办事项
 
 - [x] 配置OBS环境变量（AK/SK/Endpoint/Bucket）
 - [x] 种子数据填充（20条商品）
 - [x] 端到端API联调测试（26/26通过）
+- [x] OBS图片上传修复（媒体URI拷贝到沙箱+签名URL上传）
+- [x] 种子数据SVG→PNG替换
+- [x] 图片显示重构（ImageDisplayUtil统一处理+SVG过滤）
+- [x] 库存为0时购买按钮禁用
+- [x] WidgetDataProvider `this` → 类名调用修复
 - [ ] 替换 `ic_publish_icon.svg` 发布按钮中心图标
 - [ ] 替换 `ic_search.svg` 搜索框放大镜图标
 - [ ] 替换 `foreground.png`/`background.png`/`startIcon.png` APP 图标
@@ -474,3 +583,153 @@ OBS_BUCKET=your-bucket-name
 - [ ] WidgetDataProvider 改为异步API（当前仍用同步Mock）
 - [ ] ProfilePageView 收藏数改为异步API获取
 - [ ] 前端DevEco Studio编译验证（静态检查已通过，需实际编译确认）
+
+---
+
+## V11：实时聊天功能
+
+**完成日期**：2026-06-16
+
+### 新增功能
+- 后端聊天服务（ChatService + Chat HTTP路由 + WebSocket服务）
+- 前端WebSocket客户端（WsChatService单例，心跳+自动重连+消息分发）
+- 会话管理：创建/获取会话、会话列表、未读计数
+- 消息收发：HTTP发送 + WebSocket实时推送
+- 标记已读、离线消息拉取
+- 商品详情页"联系卖家"对接后端API
+
+### 文件变更
+
+| 操作 | 文件路径 | 说明 |
+|------|---------|------|
+| 新建 | `server/src/services/ChatService.ts` | 聊天业务逻辑（会话管理+消息收发+已读标记+WS推送） |
+| 新建 | `server/src/routes/chat.ts` | 聊天HTTP路由（5个REST接口） |
+| 新建 | `server/src/websocket/WsChatServer.ts` | WebSocket服务（连接管理+Token认证+心跳+消息推送） |
+| 修改 | `server/src/index.ts` | 注册chat路由+WebSocket服务 |
+| 新建 | `entry/src/main/ets/services/WsChatService.ets` | WebSocket客户端（连接管理+心跳+自动重连+消息分发） |
+| 新建 | `entry/src/main/ets/views/message/ConversationItem.ets` | 会话列表项组件 |
+| 修改 | `entry/src/main/ets/models/Message.ets` | 新增WsMessageType/WsConnectionState/WsMessage/PagedMessages/ConversationItem |
+| 修改 | `entry/src/main/ets/constants/AppConstants.ets` | 新增WS_URL/WS_PING_INTERVAL/WS_RECONNECT_DELAYS/CHAT_PAGE_SIZE |
+| 修改 | `entry/src/main/ets/router/RouterManager.ets` | toChat方法增加productTitle/productImage/targetUserAvatar参数 |
+| 修改 | `entry/src/main/ets/services/AuthManager.ets` | 登录/退出/启动时管理WS连接 |
+| 修改 | `entry/src/main/ets/repository/MessageRepository.ets` | 从Mock改为HTTP API调用+WS消息监听 |
+| 修改 | `entry/src/main/ets/pages/Index.ets` | MessagePageView对接真实API+WS实时更新+下拉刷新 |
+| 修改 | `entry/src/main/ets/pages/ChatPage.ets` | 全面对接后端+WS实时消息+分页加载+安全区域+键盘适配+动画 |
+| 修改 | `entry/src/main/ets/pages/ProductDetailPage.ets` | "联系卖家"改为调用后端API创建会话 |
+
+### 待办事项更新
+- [x] T1-T17 聊天功能编码任务全部完成
+- [ ] T18 集成测试与验证（需DevEco Studio编译+真机测试）
+- [ ] 前端DevEco Studio编译验证
+
+---
+
+## V11.1：Bug修复与功能完善
+
+**完成日期**：2026-06-16
+
+### 修复内容
+
+| # | 问题 | 修复 | 文件 |
+|---|------|------|------|
+| 1 | 商品详情页弹窗被商品内容遮挡 | Column改为Stack布局，弹窗覆盖在内容之上 | `ProductDetailPage.ets` |
+| 2 | 个人中心统计数据为静态mock值 | 新增`GET /stats` API，前端`loadUserStats()`从API获取 | `userAuth.ts` + `Index.ets` |
+| 3 | 卖家不能联系自己 | isOwner判断隐藏"联系卖家"按钮 | `ProductDetailPage.ets` |
+| 4 | 卖家不能购买自己商品 | isOwner判断禁用"立即购买"按钮 | `ProductDetailPage.ets` |
+| 5 | 商品详情页位置信息改为碳减排/碳积分 | 显示SKU的carbonReduction和carbonCredits | `ProductDetailPage.ets` |
+| 6 | 卖家头像不显示 | SQL JOIN users表实时获取sellerAvatar | `ProductService.ts` |
+| 7 | WebSocket消息延迟 | 合并seq+data为单一payload（wsNewMessagePayload） | `WsChatService.ets` + `ChatPage.ets` + `Index.ets` |
+| 8 | 消息已读但未读气泡不消失 | markAsRead后推送conversation_update | `ChatService.ts` + `WsChatServer.ts` |
+| 9 | 不同商品创建不同聊天会话 | conversations表UNIQUE约束含product_id | `ChatService.ts` + `businessDatabase.ts` |
+| 10 | 前端stats API路径错误 | `/auth/stats` → `/stats` | `Index.ets` |
+
+### 后端新增API
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/v1/stats` | GET | 获取用户统计（productCount/soldCount/favoriteCount/browseCount），需JWT认证 |
+
+### 后端API验证结果
+
+- `GET /api/v1/stats` ✅ 返回 productCount=11, soldCount=4, favoriteCount=2, browseCount=18
+- `GET /api/v1/browse-history` ✅ 返回 total=18
+- 后端服务正常运行在 http://localhost:3001
+
+---
+
+## V12：图标替换 + 推荐引擎异步化 + Widget异步化 + 管理后台联调
+
+**完成日期**：2026-06-17
+
+### 图标替换
+
+| 替换项 | 原始 | 替换为 | 文件 |
+|--------|------|--------|------|
+| 发布按钮中心图标 | `Image($r('app.media.ic_publish_icon'))` | `SymbolGlyph($r('sys.symbol.plus'))` | `Index.ets` |
+| 搜索框放大镜 | `Image($r('app.media.ic_search'))` | `SymbolGlyph($r('sys.symbol.magnifyingglass'))` | `AISearchBar.ets` |
+| Banner背景图 | `Image($r('app.media.startIcon'))` × 3 | 渐变色Column（3种绿色渐变） | `BannerView.ets` |
+| 碳减排图标 | `Image($r('app.media.startIcon'))` × 2 | `SymbolGlyph($r('sys.symbol.leaf_fill'))` | `ProductDetailPage.ets` |
+
+### 推荐引擎异步化
+
+| 文件 | 变更 |
+|------|------|
+| `engine/RecommendationEngine.ets` | 全部方法改为 `async`；移除 `UserProfile`/`BehaviorRepository` 依赖；改用 `productRepository.fetchProducts()` 异步API；SPU模型替代Product模型 |
+
+### Widget异步化
+
+| 文件 | 变更 |
+|------|------|
+| `widget/WidgetDataProvider.ets` | 新增 `refreshCache()`/`refreshProductCache()`/`refreshCreditCache()` 异步方法；`getProductRecommendData()`/`getCreditOverviewData()` 改为从缓存读取；`refreshProductCache` 调用 `fetchProducts()` API；`refreshCreditCache` 调用 `/stats` API |
+| `entryability/EntryAbility.ets` | 启动时调用 `WidgetDataProvider.refreshCache()` 预加载缓存 |
+
+### 后端Stats API增强
+
+| 文件 | 变更 |
+|------|------|
+| `server/src/routes/userAuth.ts` | `GET /stats` 新增 `creditBalance`/`totalEarned`/`creditLevel` 字段（从credit_accounts表查询） |
+
+### 管理后台联调
+
+| 文件 | 变更 |
+|------|------|
+| `admin/vite.config.ts` | 代理配置改为分别代理 `/api/v1`、`/api/admin`、`/api/auth` |
+| `admin/src/api/index.ts` | baseURL 改为空字符串（使用完整路径） |
+| `admin/src/api/auth.ts` | 请求路径 `/auth/*` → `/api/auth/*` |
+| `admin/src/api/analytics.ts` | 请求路径 `/dashboard/*` → `/api/admin/dashboard/*`，`/analytics/*` → `/api/admin/*` |
+
+### API集成测试结果
+
+**15/15 全部通过**
+
+| 接口 | 结果 |
+|------|------|
+| GET /captcha | PASS |
+| POST /login | PASS |
+| GET /products | PASS |
+| GET /products/:id | PASS |
+| GET /category-specs/1 | PASS |
+| GET /products?keyword | PASS |
+| GET /stats (含creditBalance/totalEarned/creditLevel) | PASS |
+| GET /profile | PASS |
+| GET /favorites | PASS |
+| GET /browse-history | PASS |
+| GET /chat/conversations | PASS |
+| GET /orders/buyer | PASS |
+| POST /obs/upload-credential | PASS |
+| GET /stats (no auth=401) | PASS |
+| POST /refresh | PASS |
+
+### 待办事项更新
+- [x] 替换 `ic_publish_icon.svg` 发布按钮中心图标 → SymbolGlyph plus
+- [x] 替换 `ic_search.svg` 搜索框放大镜图标 → SymbolGlyph magnifyingglass
+- [x] Banner占位图替换为渐变色背景
+- [x] 商品详情页碳减排图标替换为SymbolGlyph leaf_fill
+- [x] 推荐引擎异步化 — RecommendationEngine 改为异步API
+- [x] Widget异步化 — WidgetDataProvider 改为异步API + 缓存机制
+- [x] 后端Stats API增强（碳积分数据）
+- [x] V6管理后台部署联调（API路径修正 + 代理配置）
+- [x] API集成测试 15/15 通过
+- [ ] 替换 `foreground.png`/`background.png`/`startIcon.png` APP 图标
+- [ ] 前端DevEco Studio编译验证（需在IDE中编译）
+- [ ] 真机/模拟器功能测试

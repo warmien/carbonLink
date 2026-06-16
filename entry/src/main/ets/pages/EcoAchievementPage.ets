@@ -1,6 +1,7 @@
 import { EcoAchievement } from '../models/EcoAchievement';
 import { achievementRepository } from '../repository/AchievementRepository';
 import { ThemeManager } from '../theme/ThemeManager';
+import { AppConstants } from '../constants/AppConstants';
 
 @Entry
 @Component
@@ -25,6 +26,7 @@ struct EcoAchievementPage {
       .height(56)
       .padding({ left: 16, right: 16 })
       .justifyContent(FlexAlign.Center)
+      .margin({ top: AppConstants.STATUS_BAR_HEIGHT })
 
       List({ space: 12 }) {
         ForEach(this.achievements, (a: EcoAchievement) => {

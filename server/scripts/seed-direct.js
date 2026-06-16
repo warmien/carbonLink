@@ -35,7 +35,7 @@ const transaction = db.transaction(() => {
     const p = PRODUCTS[i];
     const spuId = `spu_seed_${String(i + 1).padStart(3, '0')}`;
     const now = Date.now();
-    const imageUrl = `${PUBLIC_DOMAIN}/carbonlink/seed/1781450445962-${i}.svg`;
+    const imageUrl = `${PUBLIC_DOMAIN}/carbonlink/seed/placeholder_${i}.png`;
 
     insertSpu.run(
       spuId, p.title, p.desc, p.categoryId, p.sellerId, p.sellerName, '',

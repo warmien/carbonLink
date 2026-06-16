@@ -5,6 +5,7 @@ import { ThemeManager } from '../theme/ThemeManager';
 import { AppConstants } from '../constants/AppConstants';
 import { RouterManager } from '../router/RouterManager';
 
+
 @Component
 export struct RecommendProductCard {
   @Prop recommendation: Recommendation = new Recommendation();
@@ -12,10 +13,19 @@ export struct RecommendProductCard {
   @Prop isViewed: boolean = false;
   onDislike?: (productId: string) => void;
 
+  private getDisplayImage(images: string[]): string | Resource {
+    for (let i = 0; i < images.length; i++) {
+      if (images[i].length > 0 && !images[i].endsWith('.svg')) {
+        return images[i];
+      }
+    }
+    return $r('app.media.startIcon');
+  }
+
   build() {
     Column() {
       Stack() {
-        Image(this.spu !== null && this.spu.images.length > 0 && this.spu.images[0] !== '' ? this.spu.images[0] : $r('app.media.startIcon'))
+        Image(this.spu !== null && this.spu.images.length > 0 ? this.getDisplayImage(this.spu.images) : $r('app.media.startIcon'))
           .width('100%')
           .height(120)
           .objectFit(ImageFit.Cover)

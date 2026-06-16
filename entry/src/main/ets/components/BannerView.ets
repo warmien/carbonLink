@@ -2,12 +2,12 @@ import { AppConstants } from '../constants/AppConstants';
 import { ThemeManager } from '../theme/ThemeManager';
 
 class BannerItem {
-  image: ResourceStr = '';
   title: string = '';
+  gradientColors: Array<[string, number]> = [];
   link: string = '';
-  constructor(image: ResourceStr, title: string, link: string) {
-    this.image = image;
+  constructor(title: string, gradientColors: Array<[string, number]>, link: string) {
     this.title = title;
+    this.gradientColors = gradientColors;
     this.link = link;
   }
 }
@@ -16,9 +16,9 @@ class BannerItem {
 export struct BannerView {
   @State currentIndex: number = 0;
   private banners: BannerItem[] = [
-    new BannerItem($r('app.media.startIcon'), '绿色循环，碳享未来', ''),
-    new BannerItem($r('app.media.startIcon'), '发布闲置，赚取碳积分', ''),
-    new BannerItem($r('app.media.startIcon'), '二手也能很高品质', ''),
+    new BannerItem('绿色循环，碳享未来', [['#2D8B75', 0], ['#5CB8A0', 1]], ''),
+    new BannerItem('发布闲置，赚取碳积分', [['#4A9A84', 0], ['#8ED4C2', 1]], ''),
+    new BannerItem('二手也能很高品质', [['#3A7D6A', 0], ['#6BC4A8', 1]], ''),
   ];
   private controller: SwiperController = new SwiperController();
 
@@ -27,10 +27,13 @@ export struct BannerView {
       Swiper(this.controller) {
         ForEach(this.banners, (banner: BannerItem, index: number) => {
           Stack() {
-            Image(banner.image)
+            Column()
               .width('100%')
               .height('100%')
-              .objectFit(ImageFit.Cover)
+              .linearGradient({
+                direction: GradientDirection.BottomRight,
+                colors: banner.gradientColors
+              })
 
             Column() {
               Text(banner.title)
@@ -44,10 +47,6 @@ export struct BannerView {
             .justifyContent(FlexAlign.End)
             .alignItems(HorizontalAlign.Start)
             .padding(AppConstants.SPACING_LG)
-            .linearGradient({
-              direction: GradientDirection.Bottom,
-              colors: [['rgba(0,0,0,0.6)', 0], ['rgba(0,0,0,0)', 1]]
-            })
           }
         })
       }

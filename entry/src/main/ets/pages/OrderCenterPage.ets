@@ -141,6 +141,7 @@ struct OrderCenterPage {
       .height(56)
       .padding({ left: 16, right: 16 })
       .alignItems(VerticalAlign.Center)
+      .margin({ top: AppConstants.STATUS_BAR_HEIGHT })
 
       Tabs({ index: this.currentTab, controller: this.tabsController }) {
         ForEach(this.orderTabs, (tab: string) => {
