@@ -1,9 +1,10 @@
 import { router } from '@kit.ArkUI';
 import { AuthManager } from '../services/AuthManager';
-import { ApiResponse } from '../services/HttpService';
+import { ApiResponse, HttpService } from '../services/HttpService';
 import { CaptchaService, CaptchaData } from '../services/CaptchaService';
 import { FormValidator, ValidationResult } from '../utils/FormValidator';
 import { ThemeManager } from '../theme/ThemeManager';
+import { ImageDisplayUtil } from '../components/ImagePickerPanel';
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 
@@ -29,6 +30,11 @@ struct LoginPage {
   @State captchaLoading: boolean = false;
   @State loginError: string = '';
   @State captchaOpacity: number = 1.0;
+  @State userAvatar: string = '';
+  @State userNickname: string = '';
+  @State avatarScale: number = 0.8;
+  @State avatarOpacity: number = 0;
+  private phoneDebounceId: number = 0;
 
   async aboutToAppear(): Promise<void> {
     const isLoggedIn: boolean = AppStorage.get<boolean>('isLoggedIn') || false;
@@ -45,12 +51,57 @@ struct LoginPage {
       if (rememberFlag === 'true' && savedPhone.length > 0) {
         this.phone = savedPhone;
         this.rememberMe = true;
+        this.fetchUserAvatar(savedPhone);
       }
     } catch (err) {
       console.error(`[LoginPage] loadRememberMe failed: ${(err as Error).message}`);
     }
 
     await this.loadCaptcha();
+  }
+
+  private async fetchUserAvatar(phoneNum: string): Promise<void> {
+    if (phoneNum.length !== 11) {
+      this.userAvatar = '';
+      this.userNickname = '';
+      this.avatarOpacity = 0;
+      return;
+    }
+    try {
+      const resp: ApiResponse = await HttpService.GET('/phone-avatar?phone=' + phoneNum);
+      if (resp.code === 0 && resp.data !== null) {
+        const avatar: string = (typeof resp.data['avatar'] === 'string') ? resp.data['avatar'] as string : '';
+        const nickname: string = (typeof resp.data['nickname'] === 'string') ? resp.data['nickname'] as string : '';
+        this.userAvatar = avatar;
+        this.userNickname = nickname;
+        if (avatar.length > 0 || nickname.length > 0) {
+          animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
+            this.avatarOpacity = 1;
+            this.avatarScale = 1;
+          });
+        }
+      }
+    } catch (err) {
+      this.userAvatar = '';
+      this.userNickname = '';
+    }
+  }
+
+  onPhoneChange(value: string): void {
+    this.phone = value;
+    this.phoneError = '';
+    this.loginError = '';
+    clearTimeout(this.phoneDebounceId);
+    if (value.length === 11) {
+      this.phoneDebounceId = setTimeout(() => {
+        this.fetchUserAvatar(value);
+      }, 500);
+    } else {
+      this.userAvatar = '';
+      this.userNickname = '';
+      this.avatarOpacity = 0;
+      this.avatarScale = 0.8;
+    }
   }
 
   async loadCaptcha(): Promise<void> {
@@ -152,24 +203,35 @@ struct LoginPage {
     Column() {
       Column() {
         Column() {
-          Image($r('app.media.startIcon'))
+          Image(ImageDisplayUtil.getDisplaySrc(this.userAvatar))
             .width(72)
             .height(72)
-            .borderRadius(16)
-            .margin({ bottom: 12 })
+            .borderRadius(36)
+            .scale({ x: this.avatarScale, y: this.avatarScale })
+            .opacity(this.avatarOpacity)
+            .margin({ bottom: 8 })
 
-          Text('碳易链')
-            .fontSize(28)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#333333')
-            .margin({ bottom: 4 })
+          if (this.userNickname.length > 0) {
+            Text(this.userNickname)
+              .fontSize(18)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#333333')
+              .opacity(this.avatarOpacity)
+              .margin({ bottom: 4 })
+          }
 
-          Text('让闲置流转，让减碳发生')
-            .fontSize(14)
-            .fontColor('#999999')
+          if (this.userAvatar.length === 0 && this.userNickname.length === 0) {
+            Text('欢迎回来')
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#333333')
+              .margin({ bottom: 4 })
+          }
         }
         .width('100%')
         .alignItems(HorizontalAlign.Center)
+        .height(100)
+        .justifyContent(FlexAlign.Center)
         .margin({ bottom: 32 })
 
         Column() {
@@ -182,9 +244,7 @@ struct LoginPage {
               .fontSize(16)
               .backgroundColor(Color.Transparent)
               .onChange((value: string) => {
-                this.phone = value;
-                this.phoneError = '';
-                this.loginError = '';
+                this.onPhoneChange(value);
               })
           }
           .width('100%')
@@ -342,6 +402,8 @@ struct LoginPage {
             .borderRadius(24)
             .margin({ top: 24 })
             .enabled(!this.isLoading)
+            .scale({ x: this.isLoading ? 0.98 : 1, y: this.isLoading ? 0.98 : 1 })
+            .animation({ duration: 100, curve: Curve.EaseOut })
             .onClick(() => {
               this.handleLogin();
             })

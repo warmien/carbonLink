@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
-const db = new Database('C:/Users/warminen/DevEcoStudioProjects/CarbonLink/server/data/carbonlink.db');
+const path = require('path');
+const db = new Database(path.join(__dirname, '..', 'data', 'carbonlink.db'));
 
 const insert = db.prepare('INSERT INTO carbon_credit_table (category, name, min_reduction, max_reduction, min_credits, max_credits) VALUES (?, ?, ?, ?, ?, ?)');
 

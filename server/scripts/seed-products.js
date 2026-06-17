@@ -1,5 +1,6 @@
 const ObsClient = require('esdk-obs-nodejs');
-const db = require('better-sqlite3')('C:/Users/warminen/DevEcoStudioProjects/CarbonLink/server/data/carbonlink.db');
+const path = require('path');
+const db = require('better-sqlite3')(path.join(__dirname, '..', 'data', 'carbonlink.db'));
 
 const OBS_CONFIG = {
   accessKeyId: 'HPUAUTJEWDV0RJOT891O',

@@ -34,6 +34,27 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+
+app.use((req: express.Request, res: express.Response, next: express.NextFunction): void => {
+  const start: number = Date.now();
+  const method: string = req.method;
+  const url: string = req.originalUrl;
+  const ip: string = req.ip || req.socket.remoteAddress || '-';
+
+  res.on('finish', (): void => {
+    const duration: number = Date.now() - start;
+    const status: number = res.statusCode;
+    const time: string = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    const statusIcon: string = status < 400 ? '✓' : '✗';
+    const color: string = status < 400 ? '\x1b[32m' : '\x1b[31m';
+    const reset: string = '\x1b[0m';
+    const dim: string = '\x1b[2m';
+    console.log(`${dim}[${time}]${reset} ${color}${statusIcon}${reset} ${method.padEnd(6)} ${status} ${url.padEnd(50)} ${dim}${duration}ms${reset} ${dim}${ip}${reset}`);
+  });
+
+  next();
+});
+
 app.use(auditMiddleware);
 
 app.use('/api/auth', authRoutes);

@@ -204,4 +204,22 @@ router.get('/stats', userAuthMiddleware, (req: Request, res: Response): void => 
   }
 });
 
+router.get('/phone-avatar', (req: Request, res: Response): void => {
+  const phone = req.query.phone as string;
+  if (!phone || phone.length < 11) {
+    res.json({ code: 0, message: 'success', data: { avatar: '', nickname: '' } });
+    return;
+  }
+  try {
+    const row = db.prepare('SELECT avatar, nickname FROM users WHERE phone = ?').get(phone) as { avatar: string; nickname: string } | undefined;
+    if (row) {
+      res.json({ code: 0, message: 'success', data: { avatar: row.avatar || '', nickname: row.nickname || '' } });
+    } else {
+      res.json({ code: 0, message: 'success', data: { avatar: '', nickname: '' } });
+    }
+  } catch (err) {
+    res.json({ code: 0, message: 'success', data: { avatar: '', nickname: '' } });
+  }
+});
+
 export default router;

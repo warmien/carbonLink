@@ -1501,10 +1501,14 @@ struct ProfilePageView {
         this.user.location = userObj['location'] as string;
         this.loadUserStats();
       } catch (err) {
-        this.user = userRepository.getCurrentUser();
+        this.user = new User();
       }
     } else {
-      this.user = userRepository.getCurrentUser();
+      this.user = new User();
+      this.productCount = 0;
+      this.soldCount = 0;
+      this.favoriteCount = 0;
+      this.browseCount = 0;
     }
   }
 
@@ -1634,7 +1638,7 @@ struct ProfilePageView {
 
         Row() {
           Column({ space: 4 }) {
-            Text(this.productCount.toString())
+            Text(this.isLoggedIn ? this.productCount.toString() : '-')
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1646,11 +1650,13 @@ struct ProfilePageView {
           .onClick(() => {
             if (this.isLoggedIn) {
               RouterManager.toMyProducts();
+            } else {
+              RouterManager.toLogin();
             }
           })
 
           Column({ space: 4 }) {
-            Text(this.soldCount.toString())
+            Text(this.isLoggedIn ? this.soldCount.toString() : '-')
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1662,11 +1668,13 @@ struct ProfilePageView {
           .onClick(() => {
             if (this.isLoggedIn) {
               RouterManager.toOrderCenter(4);
+            } else {
+              RouterManager.toLogin();
             }
           })
 
           Column({ space: 4 }) {
-            Text(this.favoriteCount.toString())
+            Text(this.isLoggedIn ? this.favoriteCount.toString() : '-')
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1678,11 +1686,13 @@ struct ProfilePageView {
           .onClick(() => {
             if (this.isLoggedIn) {
               RouterManager.toMyFavorites();
+            } else {
+              RouterManager.toLogin();
             }
           })
 
           Column({ space: 4 }) {
-            Text(this.browseCount.toString())
+            Text(this.isLoggedIn ? this.browseCount.toString() : '-')
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor(ThemeManager.TEXT_PRIMARY)
@@ -1694,6 +1704,8 @@ struct ProfilePageView {
           .onClick(() => {
             if (this.isLoggedIn) {
               RouterManager.toBrowseHistory();
+            } else {
+              RouterManager.toLogin();
             }
           })
         }

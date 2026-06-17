@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
-const db = new Database('C:/Users/warminen/DevEcoStudioProjects/CarbonLink/server/data/carbonlink.db');
+const path = require('path');
+const db = new Database(path.join(__dirname, '..', 'data', 'carbonlink.db'));
 
 const skus = db.prepare(`
   SELECT k.id, k.condition, k.carbon_reduction, k.carbon_credits, s.category_id, s.sub_category_id

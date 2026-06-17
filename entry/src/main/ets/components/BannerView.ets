@@ -8,18 +8,28 @@ import { RouterManager } from '../router/RouterManager';
 export struct BannerView {
   @State currentIndex: number = 0;
   @State bannerProducts: SPU[] = [];
+  @State isLoading: boolean = true;
   private controller: SwiperController = new SwiperController();
 
-  async aboutToAppear(): Promise<void> {
+  aboutToAppear(): void {
+    this.loadBannerProducts();
+  }
+
+  private async loadBannerProducts(): Promise<void> {
     try {
       const result: SPUListResult = await productRepository.fetchProducts();
-      const onSale = result.list.filter((spu: SPU): boolean =>
-        spu.status === 'on_sale' && spu.images.length > 0
-      );
+      const onSale: SPU[] = [];
+      for (let i = 0; i < result.list.length; i++) {
+        const spu: SPU = result.list[i];
+        if (spu.status === 'on_sale' && spu.images.length > 0) {
+          onSale.push(spu);
+        }
+      }
       this.bannerProducts = onSale.slice(0, 5);
     } catch (e) {
       this.bannerProducts = [];
     }
+    this.isLoading = false;
   }
 
   private getDisplayImage(spu: SPU): string {
@@ -79,7 +89,7 @@ export struct BannerView {
             .onClick(() => {
               RouterManager.toProductDetail(spu.id);
             })
-          })
+          }, (spu: SPU, index: number) => spu.id + '_' + index.toString())
         }
         .onChange((index: number) => {
           this.currentIndex = index;
@@ -94,7 +104,6 @@ export struct BannerView {
         .duration(400)
         .curve(Curve.EaseInOut)
 
-
         Row({ space: 6 }) {
           ForEach(this.bannerProducts, (_: SPU, index: number) => {
             Column()
@@ -103,7 +112,7 @@ export struct BannerView {
               .borderRadius(3)
               .backgroundColor(index === this.currentIndex ? Color.White : 'rgba(255,255,255,0.5)')
               .animation({ duration: 300, curve: Curve.EaseInOut })
-          })
+          }, (_: SPU, index: number) => 'dot_' + index.toString())
         }
         .position({ bottom: 12, right: AppConstants.SPACING_LG })
       } else {
