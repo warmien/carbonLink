@@ -10,9 +10,20 @@ export struct BannerView {
   @State bannerProducts: SPU[] = [];
   @State isLoading: boolean = true;
   private controller: SwiperController = new SwiperController();
+  private refreshTimer: number = -1;
 
   aboutToAppear(): void {
     this.loadBannerProducts();
+    this.refreshTimer = setInterval(() => {
+      this.loadBannerProducts();
+    }, 10000);
+  }
+
+  aboutToDisappear(): void {
+    if (this.refreshTimer !== -1) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = -1;
+    }
   }
 
   private async loadBannerProducts(): Promise<void> {
