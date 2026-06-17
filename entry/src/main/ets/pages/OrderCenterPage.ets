@@ -9,6 +9,10 @@ import { CreditEngine } from '../engine/CreditEngine';
 import { AchievementDetector } from '../engine/AchievementDetector';
 import { promptAction, router } from '@kit.ArkUI';
 
+interface RouterParams {
+  tabIndex: number
+}
+
 @Entry
 @Component
 struct OrderCenterPage {
@@ -21,12 +25,9 @@ struct OrderCenterPage {
   readonly orderTabs: string[] = ['全部', '待付款', '待发货', '待收货', '已完成', '已取消'];
 
   aboutToAppear(): void {
-    const params = router.getParams();
-    if (params !== null && params !== undefined) {
-      const tabVal: number = params.tabIndex as number;
-      if (tabVal !== undefined && tabVal !== null) {
-        this.currentTab = tabVal;
-      }
+    const params = router.getParams() as RouterParams;
+    if (params !== null && params !== undefined && params.tabIndex !== undefined) {
+      this.currentTab = params.tabIndex;
     }
     this.refreshOrders();
   }
