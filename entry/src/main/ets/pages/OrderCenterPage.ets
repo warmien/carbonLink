@@ -23,8 +23,8 @@ struct OrderCenterPage {
   aboutToAppear(): void {
     const params = router.getParams();
     if (params !== null && params !== undefined) {
-      const tabVal = params['tabIndex'];
-      if (typeof tabVal === 'number') {
+      const tabVal: number = params.tabIndex as number;
+      if (tabVal !== undefined && tabVal !== null) {
         this.currentTab = tabVal;
       }
     }

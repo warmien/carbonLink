@@ -21,7 +21,7 @@ export class CreditEngine {
       body['counterpartyId'] = isBuyer ? sellerId : buyerId;
       body['sellerCredits'] = sellerCredits;
       body['carbonReduction'] = carbonReduction;
-      body['isBuyer'] = isBuyer;
+      body['isBuyer'] = isBuyer ? 1 : 0;
       await HttpService.POST('/credits/trade-reward', body);
     } catch (err) {
     }

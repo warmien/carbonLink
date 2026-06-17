@@ -19,7 +19,7 @@ function toStr(val: string | number | boolean | object | undefined): string {
 function toLevel(val: string | number | boolean | object | undefined): UserLevel {
   if (typeof val === 'string') {
     if (val === '环保新手') return UserLevel.BEGINNER;
-    if (val === '环保达人') return UserLevel.MASTER;
+    if (val === '环保达人') return UserLevel.EXPERT;
     if (val === '环保先锋') return UserLevel.PIONEER;
     if (val === '环保卫士') return UserLevel.GUARDIAN;
     if (val === '环保英雄') return UserLevel.HERO;

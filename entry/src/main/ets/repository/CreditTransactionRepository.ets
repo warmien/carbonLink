@@ -1,6 +1,11 @@
 import { CreditTransaction, CreditTransactionType } from '../models/CreditTransaction';
 import { HttpService } from '../services/HttpService';
 
+class TransactionListResult {
+  list: CreditTransaction[] = [];
+  total: number = 0;
+}
+
 function toNum(val: string | number | boolean | object | undefined): number {
   if (typeof val === 'number') return val;
   if (typeof val === 'string') {
@@ -49,7 +54,7 @@ function toObjArr(val: string | number | object | undefined): Record<string, str
 }
 
 export class CreditTransactionRepository {
-  async getByUserId(userId: string, page: number, pageSize: number, typeFilter?: string): Promise<{ list: CreditTransaction[]; total: number }> {
+  async getByUserId(userId: string, page: number, pageSize: number, typeFilter?: string): Promise<TransactionListResult> {
     try {
       let path: string = `/credits/transactions?page=${page.toString()}&pageSize=${pageSize.toString()}`;
       if (typeFilter && typeFilter !== 'all') {
@@ -73,11 +78,15 @@ export class CreditTransactionRepository {
           tx.timestamp = toNum(item['timestamp']);
           list.push(tx);
         }
-        return { list, total };
+        const result = new TransactionListResult();
+        result.list = list;
+        result.total = total;
+        return result;
       }
     } catch (err) {
     }
-    return { list: [], total: 0 };
+    const empty = new TransactionListResult();
+    return empty;
   }
 }
 
