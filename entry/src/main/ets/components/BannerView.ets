@@ -25,11 +25,28 @@ export struct BannerView {
           onSale.push(spu);
         }
       }
-      this.bannerProducts = onSale.slice(0, 5);
+      const scored: SPU[] = onSale.slice();
+      for (let i = 0; i < scored.length; i++) {
+        for (let j = i + 1; j < scored.length; j++) {
+          const scoreI: number = this.bannerScore(scored[i]);
+          const scoreJ: number = this.bannerScore(scored[j]);
+          if (scoreJ > scoreI) {
+            const tmp: SPU = scored[i];
+            scored[i] = scored[j];
+            scored[j] = tmp;
+          }
+        }
+      }
+      this.bannerProducts = scored.slice(0, 5);
     } catch (e) {
       this.bannerProducts = [];
     }
     this.isLoading = false;
+  }
+
+  private bannerScore(spu: SPU): number {
+    const recency: number = Math.max(0, 1 - (Date.now() - spu.createdAt) / (7 * 24 * 3600 * 1000));
+    return spu.viewCount * 0.3 + spu.favoriteCount * 2.0 + recency * 10;
   }
 
   private getDisplayImage(spu: SPU): string {
