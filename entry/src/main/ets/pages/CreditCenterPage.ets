@@ -179,13 +179,13 @@ struct CreditCenterPage {
         .margin({ bottom: 12 })
 
       Row() {
-        this.ActionItem('积分流水', '#1890FF', $r('sys.symbol.list_bullet'), () => {
+        this.ActionItem('积分流水', '#1890FF', $r('sys.symbol.doc_text_fill'), () => {
           RouterManager.toCreditLedger();
         })
-        this.ActionItem('环保成就', '#52C41A', $r('sys.symbol.leaf'), () => {
+        this.ActionItem('环保成就', '#52C41A', $r('sys.symbol.leaf_fill'), () => {
           RouterManager.toEcoAchievement();
         })
-        this.ActionItem('积分商城', '#FAAD14', $r('sys.symbol.gift'), () => {
+        this.ActionItem('积分商城', '#FAAD14', $r('sys.symbol.gift_fill'), () => {
           RouterManager.toCreditMall();
         })
       }

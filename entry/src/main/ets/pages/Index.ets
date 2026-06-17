@@ -747,6 +747,8 @@ struct PublishPageView {
             skuItem['originalPrice'] = origPriceVal;
             skuItem['condition'] = this.selectedCondition || '九成新';
             skuItem['stock'] = 1;
+            skuItem['carbonReduction'] = this.calculatedReduction;
+            skuItem['carbonCredits'] = this.calculatedCredits;
             createData['skus'] = [skuItem] as object;
             const spu = await productRepository.createProduct(createData);
             if (spu) {
@@ -1828,25 +1830,6 @@ struct ProfilePageView {
         .margin({ left: 16, right: 16 })
 
         Column() {
-          Row({ space: 10 }) {
-            Stack() {
-              Column()
-                .width(28)
-                .height(28)
-                .borderRadius(6)
-                .backgroundColor('#E6F7FF')
-              Image($r('sys.symbol.leaf_fill'))
-                .width(16)
-                .height(16)
-                .fillColor('#1890FF')
-            }
-            Text('碳积分中心')
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(ThemeManager.TEXT_PRIMARY)
-          }
-          .width('100%')
-          .padding({ left: 16, right: 16, top: 16, bottom: 8 })
 
           Column() {
             Row() {

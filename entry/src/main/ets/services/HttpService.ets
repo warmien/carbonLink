@@ -9,7 +9,7 @@ export interface ApiResponse {
 }
 
 export class HttpService {
-  private static readonly BASE_URL: string = 'http://192.168.10.55:3001/api/v1';
+  private static readonly BASE_URL: string = 'http://115.190.158.215:3001/api/v1';
   private static readonly CONNECT_TIMEOUT: number = 10000;
   private static readonly READ_TIMEOUT: number = 30000;
   private static isRefreshing: boolean = false;

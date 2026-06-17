@@ -6,7 +6,7 @@
 **项目定位**：HarmonyOS NEXT 原生应用 — 校园二手闲置交易平台  
 **技术栈**：ArkTS + ArkUI + Stage Model + MVVM  
 **仓库地址**：https://github.com/warmien/carbonLink.git  
-**当前版本**：V11 实时聊天功能
+**当前版本**：V12.1 Bug修复 + 功能完善
 
 ---
 
@@ -733,3 +733,58 @@ OBS_BUCKET=your-bucket-name
 - [ ] 替换 `foreground.png`/`background.png`/`startIcon.png` APP 图标
 - [ ] 前端DevEco Studio编译验证（需在IDE中编译）
 - [ ] 真机/模拟器功能测试
+
+---
+
+## V12.1：Bug修复 + 功能完善
+
+**完成日期**：2026-06-17
+
+### 变更文件清单
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| `entry/src/main/ets/components/BannerView.ets` | 修改 | 重写为从API获取在售商品数据展示，点击跳转详情 |
+| `entry/src/main/ets/constants/AppConstants.ets` | 修改 | WS_URL → ws://115.190.158.215:3001/ws/chat |
+| `entry/src/main/ets/pages/CreditCenterPage.ets` | 修改 | 快捷入口图标 → doc_text_fill/leaf_fill/gift_fill |
+| `entry/src/main/ets/pages/Index.ets` | 修改 | 删除"碳积分中心"标题行；skuItem添加carbonReduction/carbonCredits |
+| `entry/src/main/ets/pages/SettingsPage.ets` | 修改 | 全面重写：账号区+通用区+支持区+退出登录 |
+| `entry/src/main/ets/services/HttpService.ets` | 修改 | BASE_URL → http://115.190.158.215:3001/api/v1 |
+| `server/src/services/ProductService.ts` | 修改 | calculateCarbonCredits支持子分类精确匹配+大类平均值兜底 |
+| `server/scripts/seed-carbon-credit.js` | 新增 | 插入60条carbon_credit_table种子数据 |
+| `server/scripts/fix-carbon-credits.js` | 新增 | 更新已有SKU的碳积分数据 |
+
+### 核心变更说明
+
+1. **GradientDirection修复** — `BottomRight` → `RightBottom`
+2. **碳积分为0根因修复** — carbon_credit_table为空 → 插入60条种子数据；后端支持子分类精确匹配；前端发布时传递carbonReduction/carbonCredits
+3. **设置页重写** — 账号区(头像+修改密码)、通用区(通知/位置/缓存/语言)、支持区(协议/隐私/反馈/关于)、退出登录
+4. **轮播图改为展示数据库商品** — BannerView从API获取在售商品，展示图片+标题+价格+卖家，点击跳转详情
+5. **前端BASE_URL/WS_URL更新** — 指向云服务器 115.190.158.215:3001
+6. **云服务器部署** — Ubuntu 22.04 + Node.js v20 + pm2 + 后端服务运行成功
+
+### 云服务器信息
+
+| 参数 | 值 |
+|------|-----|
+| IP | 115.190.158.215 |
+| API地址 | http://115.190.158.215:3001/api/v1 |
+| WebSocket | ws://115.190.158.215:3001/ws/chat |
+| 后端路径 | /root/carbonLink/server |
+| pm2进程名 | carbonlink |
+
+### 待办事项更新
+- [x] GradientDirection.BottomRight → RightBottom 修复
+- [x] 碳积分中心快捷入口图标替换
+- [x] 碳积分为0根因修复（种子数据+子分类匹配+前端传参）
+- [x] 设置页全面重写
+- [x] 轮播图改为展示数据库商品
+- [x] 前端BASE_URL/WS_URL指向云服务器
+- [x] 云服务器后端部署
+- [ ] 服务器pm2 ecosystem.config.js守护进程配置
+- [ ] 服务器防火墙开放3001端口
+- [ ] 服务器碳积分种子数据重新插入
+- [ ] 服务器fix-carbon-credits.js重新执行
+- [ ] 前端DevEco Studio编译验证
+- [ ] 真机/模拟器功能测试
+- [ ] 轮播图功能验证

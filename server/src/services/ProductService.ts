@@ -62,7 +62,7 @@ export class ProductService {
 
       for (const skuParam of params.skus) {
         const skuId = uuidv4();
-        const carbon = ProductService.calculateCarbonCredits(params.categoryId, skuParam.condition);
+        const carbon = ProductService.calculateCarbonCredits(params.categoryId, skuParam.condition, params.subCategoryId || undefined);
 
         db.prepare(`
           INSERT INTO sku (id, spu_id, price, original_price, condition, carbon_reduction, carbon_credits,
@@ -396,9 +396,9 @@ export class ProductService {
     }
 
     if (updates.condition !== undefined) {
-      const spuRow = db.prepare('SELECT category_id FROM spu WHERE id = ?').get(existing.spu_id) as { category_id: number } | undefined;
+      const spuRow = db.prepare('SELECT category_id, sub_category_id FROM spu WHERE id = ?').get(existing.spu_id) as { category_id: number; sub_category_id: number | null } | undefined;
       if (spuRow) {
-        const carbon = ProductService.calculateCarbonCredits(spuRow.category_id, updates.condition as string);
+        const carbon = ProductService.calculateCarbonCredits(spuRow.category_id, updates.condition as string, spuRow.sub_category_id || undefined);
         setClauses.push('carbon_reduction = ?', 'carbon_credits = ?');
         values.push(carbon.carbonReduction, carbon.carbonCredits);
       }
@@ -437,18 +437,35 @@ export class ProductService {
     })();
   }
 
-  static calculateCarbonCredits(categoryId: number, condition: string): { carbonReduction: number; carbonCredits: number } {
+  static calculateCarbonCredits(categoryId: number, condition: string, subCategoryId?: number): { carbonReduction: number; carbonCredits: number } {
     const categoryRow = db.prepare('SELECT name FROM categories WHERE id = ?').get(categoryId) as { name: string } | undefined;
     if (!categoryRow) {
       return { carbonReduction: 0, carbonCredits: 0 };
     }
 
-    const carbonRow = db.prepare(
-      'SELECT min_reduction, max_reduction, min_credits, max_credits FROM carbon_credit_table WHERE category = ?'
-    ).get(categoryRow.name) as { min_reduction: number; max_reduction: number; min_credits: number; max_credits: number } | undefined;
+    let carbonRow: { min_reduction: number; max_reduction: number; min_credits: number; max_credits: number } | undefined;
+
+    if (subCategoryId && subCategoryId > 0) {
+      const subCategoryRow = db.prepare('SELECT name FROM sub_categories WHERE id = ?').get(subCategoryId) as { name: string } | undefined;
+      if (subCategoryRow) {
+        carbonRow = db.prepare(
+          'SELECT min_reduction, max_reduction, min_credits, max_credits FROM carbon_credit_table WHERE category = ? AND name = ?'
+        ).get(categoryRow.name, subCategoryRow.name) as { min_reduction: number; max_reduction: number; min_credits: number; max_credits: number } | undefined;
+      }
+    }
 
     if (!carbonRow) {
-      return { carbonReduction: 0, carbonCredits: 0 };
+      const rows = db.prepare(
+        'SELECT min_reduction, max_reduction, min_credits, max_credits FROM carbon_credit_table WHERE category = ?'
+      ).all(categoryRow.name) as { min_reduction: number; max_reduction: number; min_credits: number; max_credits: number }[];
+      if (rows.length === 0) {
+        return { carbonReduction: 0, carbonCredits: 0 };
+      }
+      const avgMinR = rows.reduce((s: number, r: { min_reduction: number }): number => s + r.min_reduction, 0) / rows.length;
+      const avgMaxR = rows.reduce((s: number, r: { max_reduction: number }): number => s + r.max_reduction, 0) / rows.length;
+      const avgMinC = rows.reduce((s: number, r: { min_credits: number }): number => s + r.min_credits, 0) / rows.length;
+      const avgMaxC = rows.reduce((s: number, r: { max_credits: number }): number => s + r.max_credits, 0) / rows.length;
+      carbonRow = { min_reduction: avgMinR, max_reduction: avgMaxR, min_credits: avgMinC, max_credits: avgMaxC };
     }
 
     const factorRow = db.prepare('SELECT factor FROM condition_factors WHERE name = ?').get(condition) as { factor: number } | undefined;
