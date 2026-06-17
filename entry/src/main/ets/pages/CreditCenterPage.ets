@@ -1,6 +1,6 @@
 import { CreditAccount, UserLevel } from '../models/CreditAccount';
 import { creditAccountRepository } from '../repository/CreditAccountRepository';
-import { creditTransactionRepository } from '../repository/CreditTransactionRepository';
+
 import { ThemeManager } from '../theme/ThemeManager';
 import { AppConstants } from '../constants/AppConstants';
 import { RouterManager } from '../router/RouterManager';
@@ -22,13 +22,16 @@ struct CreditCenterPage {
     this.loadCreditData();
   }
 
-  loadCreditData(): void {
-    const account = creditAccountRepository.getOrCreate(this.userId);
+  async loadCreditData(): Promise<void> {
+    const account = await creditAccountRepository.getAccount(this.userId);
     this.balance = account.balance;
     this.totalEarned = account.totalEarned;
     this.level = account.level;
-    this.todayEarned = creditTransactionRepository.getTodayEarned(this.userId);
-    this.totalReduction = creditTransactionRepository.getTotalReduction(this.userId);
+    const stats = await creditAccountRepository.getStats(this.userId);
+    const todayEarnedVal = stats['todayEarned'];
+    this.todayEarned = typeof todayEarnedVal === 'number' ? todayEarnedVal : 0;
+    const totalReductionVal = stats['totalReduction'];
+    this.totalReduction = typeof totalReductionVal === 'number' ? totalReductionVal : 0;
     this.calcLevelProgress();
   }
 

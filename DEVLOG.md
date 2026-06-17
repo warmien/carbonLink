@@ -6,7 +6,7 @@
 **项目定位**：HarmonyOS NEXT 原生应用 — 校园二手闲置交易平台  
 **技术栈**：ArkTS + ArkUI + Stage Model + MVVM  
 **仓库地址**：https://github.com/warmien/carbonLink.git  
-**当前版本**：V12.1 Bug修复 + 功能完善
+**当前版本**：V13 积分系统后端化
 
 ---
 
@@ -788,3 +788,64 @@ OBS_BUCKET=your-bucket-name
 - [ ] 前端DevEco Studio编译验证
 - [ ] 真机/模拟器功能测试
 - [ ] 轮播图功能验证
+
+---
+
+## V13：积分系统后端化
+
+**完成日期**：2026-06-18
+
+### 变更概述
+
+将碳积分系统从前端本地内存实现（CreditEngine/CreditAccountRepository/CreditTransactionRepository 均为内存Map）迁移到后端API + SQLite持久化，实现积分数据跨设备同步和持久存储。
+
+### 文件变更清单
+
+| 文件路径 | 类型 | 变更说明 |
+|----------|------|----------|
+| `server/src/services/CreditService.ts` | 新增 | 完整积分服务：onTradeCompleted/onProductPublished/onDonation/onReform/onAchievementReward/transferCredits/onViolation/exchangeCredits/getAccount/getTransactions/getStats等 |
+| `server/src/routes/credit.ts` | 新增 | 积分API路由（11个端点：GET /account, GET /transactions, GET /stats, POST /publish-reward, POST /trade-reward, POST /achievement-reward, POST /donation-reward, POST /reform-reward, POST /transfer, POST /exchange） |
+| `server/src/index.ts` | 修改 | 注册credit路由 `/api/v1/credits` |
+| `entry/src/main/ets/repository/CreditAccountRepository.ets` | 重写 | 从内存Map改为API调用（getAccount/getBalance/getStats），添加toLevel函数替代as UserLevel |
+| `entry/src/main/ets/repository/CreditTransactionRepository.ets` | 重写 | 从内存数组改为API调用（getByUserId返回{list,total}），添加toTxType/toObjArr函数 |
+| `entry/src/main/ets/engine/CreditEngine.ets` | 重写 | 所有方法改为async，调用后端API；移除未使用import；ExchangeResult类定义 |
+| `entry/src/main/ets/engine/AchievementDetector.ets` | 重写 | 改为async，使用creditAccountRepository.getStats()；移除as number类型断言 |
+| `entry/src/main/ets/pages/CreditMallPage.ets` | 修改 | aboutToAppear和doExchange改为async |
+| `entry/src/main/ets/pages/CreditCenterPage.ets` | 修改 | loadCreditData改为async，使用getAccount+getStats |
+| `entry/src/main/ets/pages/CreditLedgerPage.ets` | 修改 | loadTransactions和loadMore改为async |
+| `entry/src/main/ets/pages/OrderCenterPage.ets` | 修改 | onTradeCompleted参数修复（0→order.carbonCredits）；router.getParams()类型安全修复 |
+
+### 核心变更说明
+
+1. **积分系统后端化** — CreditService.ts提供完整的积分增减逻辑，支持交易奖励(20%)、发布奖励(+10)、捐赠奖励(1.5x)、改造奖励(2x)、成就奖励、转账(10%手续费)、违规扣除(2x)、积分兑换
+2. **前端API对接** — CreditAccountRepository/CreditTransactionRepository/CreditEngine全部改为async+API调用
+3. **ArkTS兼容性修复** — 移除`as UserLevel`/`as CreditTransactionType`类型断言，改用toLevel/toTxType守卫函数；移除`as number`从object类型转换；router.getParams()类型安全修复
+4. **后端路由Bug修复** — credit.ts中`(req as any).user.userId` → `(req as any).userId`（与userAuthMiddleware一致）
+5. **云服务器部署** — 积分系统已部署到115.190.158.215:3001，API测试全部通过
+
+### API测试结果
+
+```
+1. Captcha: OK
+2. Login: OK
+3. Credit Account: {"balance":150,"totalEarned":200,"totalSpent":50,"level":"环保达人"}
+4. Credit Stats: {"balance":150,"totalEarned":200,"totalSpent":50,"level":"环保达人","todayEarned":0,"totalReduction":0,"tradeCount":0}
+5. Transactions total: 0
+6. Publish reward: OK +10
+7. After publish: {"balance":160,"totalEarned":210,"totalSpent":50,"level":"环保达人"}
+```
+
+### 待办事项更新
+- [x] 后端CreditService.ts积分服务
+- [x] 后端credit.ts路由（11个API端点）
+- [x] 前端CreditAccountRepository API对接
+- [x] 前端CreditTransactionRepository API对接
+- [x] 前端CreditEngine async化
+- [x] 前端AchievementDetector async化
+- [x] 前端页面async适配
+- [x] ArkTS兼容性修复（类型断言/未使用import）
+- [x] 后端路由Bug修复（user.userId → userId）
+- [x] 云服务器部署+API测试
+- [ ] 前端DevEco Studio编译验证
+- [ ] 真机/模拟器功能测试
+- [ ] 积分流水页面实际数据验证

@@ -21,9 +21,12 @@ struct OrderCenterPage {
   readonly orderTabs: string[] = ['全部', '待付款', '待发货', '待收货', '已完成', '已取消'];
 
   aboutToAppear(): void {
-    const params: Record<string, number> = router.getParams() as Record<string, number>;
-    if (params !== null && params !== undefined && params['tabIndex'] !== undefined) {
-      this.currentTab = params['tabIndex'] as number;
+    const params = router.getParams();
+    if (params !== null && params !== undefined) {
+      const tabVal = params['tabIndex'];
+      if (typeof tabVal === 'number') {
+        this.currentTab = tabVal;
+      }
     }
     this.refreshOrders();
   }
@@ -275,7 +278,7 @@ struct OrderCenterPage {
                             .type(ButtonType.Normal)
                             .onClick(() => {
                               orderRepository.updateOrderStatus(order.id, OrderStatus.COMPLETED);
-                              CreditEngine.onTradeCompleted(order.id, 'user_1', order.sellerId, 0, 0);
+                              CreditEngine.onTradeCompleted(order.id, 'user_1', order.sellerId, order.carbonCredits || 0, order.carbonReduction || 0);
                               AchievementDetector.detect('user_1', 'trade');
                               AchievementDetector.detect(order.sellerId, 'trade');
                               this.refreshOrders();

@@ -19,20 +19,21 @@ struct CreditLedgerPage {
     this.loadTransactions();
   }
 
-  loadTransactions(): void {
+  async loadTransactions(): Promise<void> {
     this.currentPage = 1;
-    this.transactions = creditTransactionRepository.getByUserId(this.userId, 1, this.pageSize, this.currentFilter);
-    this.hasMore = this.transactions.length >= this.pageSize;
+    const result = await creditTransactionRepository.getByUserId(this.userId, 1, this.pageSize, this.currentFilter);
+    this.transactions = result.list;
+    this.hasMore = result.list.length >= this.pageSize;
   }
 
-  loadMore(): void {
+  async loadMore(): Promise<void> {
     if (!this.hasMore) return;
     this.currentPage++;
-    const more = creditTransactionRepository.getByUserId(this.userId, this.currentPage, this.pageSize, this.currentFilter);
-    if (more.length > 0) {
-      this.transactions = this.transactions.concat(more);
+    const result = await creditTransactionRepository.getByUserId(this.userId, this.currentPage, this.pageSize, this.currentFilter);
+    if (result.list.length > 0) {
+      this.transactions = this.transactions.concat(result.list);
     }
-    this.hasMore = more.length >= this.pageSize;
+    this.hasMore = result.list.length >= this.pageSize;
   }
 
   getTypeLabel(type: CreditTransactionType): string {

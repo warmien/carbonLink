@@ -1,81 +1,83 @@
 import { CreditTransaction, CreditTransactionType } from '../models/CreditTransaction';
+import { HttpService } from '../services/HttpService';
+
+function toNum(val: string | number | boolean | object | undefined): number {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const n = parseFloat(val);
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
+function toStr(val: string | number | boolean | object | undefined): string {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return val.toString();
+  return '';
+}
+
+function toTxType(val: string | number | boolean | object | undefined): CreditTransactionType {
+  if (typeof val === 'string') {
+    if (val === 'TRADE_REWARD') return CreditTransactionType.TRADE_REWARD;
+    if (val === 'PUBLISH_REWARD') return CreditTransactionType.PUBLISH_REWARD;
+    if (val === 'ACHIEVEMENT_REWARD') return CreditTransactionType.ACHIEVEMENT_REWARD;
+    if (val === 'DONATION_REWARD') return CreditTransactionType.DONATION_REWARD;
+    if (val === 'REFORM_REWARD') return CreditTransactionType.REFORM_REWARD;
+    if (val === 'TRANSFER_IN') return CreditTransactionType.TRANSFER_IN;
+    if (val === 'TRANSFER_OUT') return CreditTransactionType.TRANSFER_OUT;
+    if (val === 'TRANSFER_FEE') return CreditTransactionType.TRANSFER_FEE;
+    if (val === 'EXCHANGE_DEDUCT') return CreditTransactionType.EXCHANGE_DEDUCT;
+    if (val === 'EXPIRE_CLEAR') return CreditTransactionType.EXPIRE_CLEAR;
+    if (val === 'VIOLATION_DEDUCT') return CreditTransactionType.VIOLATION_DEDUCT;
+  }
+  return CreditTransactionType.PUBLISH_REWARD;
+}
+
+function toObjArr(val: string | number | object | undefined): Record<string, string | number | object>[] {
+  if (typeof val !== 'object' || val === null) {
+    return [];
+  }
+  const arr: Record<string, string | number | object>[] = [];
+  try {
+    const candidate = val as Record<string, string | number | object>[];
+    if (typeof candidate.length === 'number') {
+      return candidate;
+    }
+  } catch (e) {
+  }
+  return arr;
+}
 
 export class CreditTransactionRepository {
-  private transactions: CreditTransaction[] = [];
-
-  add(transaction: CreditTransaction): void {
-    this.transactions.push(transaction);
-  }
-
-  getByUserId(userId: string, page: number, pageSize: number, typeFilter?: string): CreditTransaction[] {
-    let filtered = this.transactions.filter((t: CreditTransaction): boolean => t.userId === userId);
-    if (typeFilter && typeFilter !== 'all') {
-      if (typeFilter === 'income') {
-        filtered = filtered.filter((t: CreditTransaction): boolean =>
-          t.type === CreditTransactionType.TRADE_REWARD ||
-          t.type === CreditTransactionType.PUBLISH_REWARD ||
-          t.type === CreditTransactionType.ACHIEVEMENT_REWARD ||
-          t.type === CreditTransactionType.DONATION_REWARD ||
-          t.type === CreditTransactionType.REFORM_REWARD ||
-          t.type === CreditTransactionType.TRANSFER_IN
-        );
-      } else if (typeFilter === 'expense') {
-        filtered = filtered.filter((t: CreditTransaction): boolean =>
-          t.type === CreditTransactionType.EXCHANGE_DEDUCT ||
-          t.type === CreditTransactionType.EXPIRE_CLEAR ||
-          t.type === CreditTransactionType.TRANSFER_OUT ||
-          t.type === CreditTransactionType.TRANSFER_FEE ||
-          t.type === CreditTransactionType.VIOLATION_DEDUCT
-        );
+  async getByUserId(userId: string, page: number, pageSize: number, typeFilter?: string): Promise<{ list: CreditTransaction[]; total: number }> {
+    try {
+      let path: string = `/credits/transactions?page=${page.toString()}&pageSize=${pageSize.toString()}`;
+      if (typeFilter && typeFilter !== 'all') {
+        path += `&type=${typeFilter}`;
       }
+      const resp = await HttpService.GET(path);
+      if (resp.code === 0 && resp.data !== null) {
+        const total: number = toNum(resp.data['total']);
+        const listData = toObjArr(resp.data['list']);
+        const list: CreditTransaction[] = [];
+        for (let i = 0; i < listData.length; i++) {
+          const item = listData[i];
+          const tx = new CreditTransaction();
+          tx.id = toStr(item['id']);
+          tx.userId = toStr(item['user_id']);
+          tx.type = toTxType(item['type']);
+          tx.amount = toNum(item['amount']);
+          tx.balanceAfter = toNum(item['balance_after']);
+          tx.relatedId = toStr(item['related_id']);
+          tx.carbonReduction = toNum(item['carbon_reduction']);
+          tx.timestamp = toNum(item['timestamp']);
+          list.push(tx);
+        }
+        return { list, total };
+      }
+    } catch (err) {
     }
-    filtered.sort((a: CreditTransaction, b: CreditTransaction): number => b.timestamp - a.timestamp);
-    const start = (page - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }
-
-  existsByRelatedId(relatedId: string): boolean {
-    return this.transactions.some((t: CreditTransaction): boolean => t.relatedId === relatedId);
-  }
-
-  countByType(userId: string, type: CreditTransactionType): number {
-    return this.transactions.filter((t: CreditTransaction): boolean =>
-      t.userId === userId && t.type === type
-    ).length;
-  }
-
-  getTodayEarned(userId: string): number {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const startTs = todayStart.getTime();
-    return this.transactions
-      .filter((t: CreditTransaction): boolean =>
-        t.userId === userId && t.timestamp >= startTs && t.amount > 0
-      )
-      .reduce((sum: number, t: CreditTransaction): number => sum + t.amount, 0);
-  }
-
-  getTotalReduction(userId: string): number {
-    return this.transactions
-      .filter((t: CreditTransaction): boolean =>
-        t.userId === userId && t.carbonReduction > 0
-      )
-      .reduce((sum: number, t: CreditTransaction): number => sum + t.carbonReduction, 0);
-  }
-
-  getTradeDates(userId: string): number[] {
-    const tradeTx = this.transactions.filter((t: CreditTransaction): boolean =>
-      t.userId === userId && t.type === CreditTransactionType.TRADE_REWARD
-    );
-    const dateSet = new Set<number>();
-    for (const tx of tradeTx) {
-      const d = new Date(tx.timestamp);
-      d.setHours(0, 0, 0, 0);
-      dateSet.add(d.getTime());
-    }
-    const dates = Array.from(dateSet);
-    dates.sort((a: number, b: number): number => b - a);
-    return dates;
+    return { list: [], total: 0 };
   }
 }
 
