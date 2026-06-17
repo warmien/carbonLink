@@ -69,7 +69,7 @@ export class AppConstants {
   static readonly STATUS_BAR_HEIGHT: number = 48;
   static readonly HOME_INDICATOR_HEIGHT: number = 34;
 
-  static readonly WS_URL: string = 'ws://115.190.158.215:3001/ws/chat';
+  static readonly WS_URL: string = 'ws://YOUR_SERVER_IP:3001/ws/chat';
   static readonly WS_PING_INTERVAL: number = 30000;
   static readonly WS_RECONNECT_DELAYS: number[] = [1000, 2000, 4000, 8000, 16000];
   static readonly WS_MAX_RECONNECT_DELAY: number = 30000;

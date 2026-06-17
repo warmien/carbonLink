@@ -8,11 +8,11 @@ export enum AiProvider {
 
 export class AiBackendConfig {
   static readonly DASHSCOPE_API_URL: string = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-  static readonly DASHSCOPE_API_KEY: string = 'sk-17a83917208a4911b6acfedf00102d6c';
+  static readonly DASHSCOPE_API_KEY: string = 'YOUR_DASHSCOPE_API_KEY';
   static readonly DASHSCOPE_MODEL: string = 'qwen-plus';
 
   static readonly DOUBAO_API_URL: string = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
-  static readonly DOUBAO_API_KEY: string = 'ark-47c6de9a-e87a-431c-b312-4f67403c68eb-7f3d8';
+  static readonly DOUBAO_API_KEY: string = 'YOUR_DOUBAO_API_KEY';
   static readonly DOUBAO_MODEL: string = 'doubao-seed-2-0-mini-260428';
 
   static currentProvider: AiProvider = AiProvider.DOUBAO;

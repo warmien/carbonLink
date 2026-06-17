@@ -3,8 +3,8 @@ const path = require('path');
 const db = require('better-sqlite3')(path.join(__dirname, '..', 'data', 'carbonlink.db'));
 
 const OBS_CONFIG = {
-  accessKeyId: 'HPUAUTJEWDV0RJOT891O',
-  secretAccessKey: 'k9OZo7TqlOz6c6cCYid05SH9liEnwVv8TzSv8bKU',
+  accessKeyId: process.env.OBS_ACCESS_KEY_ID || 'your_obs_access_key_id',
+  secretAccessKey: process.env.OBS_SECRET_ACCESS_KEY || 'your_obs_secret_access_key',
   server: 'obs.cn-north-4.myhuaweicloud.com',
   bucket: 'carbon-link',
 };

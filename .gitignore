@@ -13,6 +13,7 @@
 /.arts
 /.codeartsdoer
 *.py
+package.json
 
 # Server
 server/node_modules/
@@ -30,6 +31,8 @@ server/out*.txt
 server/err*.txt
 server/server_*.log
 server/server_*.err
+server/ssh-*.js
+server-deploy.zip
 
 # Admin
 admin/node_modules/
@@ -37,3 +40,6 @@ admin/dist/
 
 # Spec
 .spec/
+
+# Dev log
+DEVLOG.md
