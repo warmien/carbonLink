@@ -58,7 +58,8 @@ export class OrderRepository {
       if (resp.code === 0 && resp.data !== null) {
         const data = resp.data;
         if (typeof data === 'object' && data !== null) {
-          const candidate = data as Record<string, string | number | object>[];
+          const obj = data as object;
+          const candidate = obj as Record<string, string | number | object>[];
           if (typeof candidate.length === 'number') {
             const orders: Order[] = [];
             for (let i = 0; i < candidate.length; i++) {
@@ -83,7 +84,8 @@ export class OrderRepository {
       if (resp.code === 0 && resp.data !== null) {
         const data = resp.data;
         if (typeof data === 'object' && data !== null) {
-          const candidate = data as Record<string, string | number | object>[];
+          const obj = data as object;
+          const candidate = obj as Record<string, string | number | object>[];
           if (typeof candidate.length === 'number') {
             const orders: Order[] = [];
             for (let i = 0; i < candidate.length; i++) {
