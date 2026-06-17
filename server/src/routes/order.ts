@@ -70,4 +70,24 @@ router.put('/:orderId/ship', userAuthMiddleware, (req: Request, res: Response): 
   }
 });
 
+router.put('/:orderId/cancel', userAuthMiddleware, (req: Request, res: Response): void => {
+  try {
+    const userId = (req as any).userId;
+    const order = OrderService.cancelOrder(req.params.orderId, userId);
+    res.json({ code: 0, message: '取消成功', data: order });
+  } catch (err) {
+    res.status(400).json({ code: 40001, message: err instanceof Error ? err.message : '操作失败', data: null });
+  }
+});
+
+router.put('/:orderId/pay', userAuthMiddleware, (req: Request, res: Response): void => {
+  try {
+    const userId = (req as any).userId;
+    const order = OrderService.payOrder(req.params.orderId, userId);
+    res.json({ code: 0, message: '付款成功', data: order });
+  } catch (err) {
+    res.status(400).json({ code: 40001, message: err instanceof Error ? err.message : '操作失败', data: null });
+  }
+});
+
 export default router;

@@ -32,8 +32,8 @@ struct OrderCenterPage {
     this.refreshOrders();
   }
 
-  refreshOrders(): void {
-    this.allOrders = orderRepository.getOrders();
+  async refreshOrders(): Promise<void> {
+    this.allOrders = await orderRepository.getBuyerOrders();
     this.filterOrders(this.currentTab);
   }
 
@@ -244,10 +244,14 @@ struct OrderCenterPage {
                             .border({ width: 0.5, color: '#E0E0E0' })
                             .height(32)
                             .type(ButtonType.Normal)
-                            .onClick(() => {
-                              orderRepository.updateOrderStatus(order.id, OrderStatus.CANCELLED);
-                              this.refreshOrders();
-                              promptAction.showToast({ message: '订单已取消' });
+                            .onClick(async () => {
+                              const success = await orderRepository.cancelOrder(order.id);
+                              if (success) {
+                                this.refreshOrders();
+                                promptAction.showToast({ message: '订单已取消' });
+                              } else {
+                                promptAction.showToast({ message: '取消失败' });
+                              }
                             })
                           Button('立即付款')
                             .fontSize(13)
@@ -257,10 +261,14 @@ struct OrderCenterPage {
                             .height(32)
                             .type(ButtonType.Normal)
                             .margin({ left: 8 })
-                            .onClick(() => {
-                              orderRepository.updateOrderStatus(order.id, OrderStatus.PENDING_SHIPMENT);
-                              this.refreshOrders();
-                              promptAction.showToast({ message: '付款成功' });
+                            .onClick(async () => {
+                              const success = await orderRepository.payOrder(order.id);
+                              if (success) {
+                                this.refreshOrders();
+                                promptAction.showToast({ message: '付款成功' });
+                              } else {
+                                promptAction.showToast({ message: '付款失败' });
+                              }
                             })
                         }
                         .width('100%')
@@ -277,13 +285,17 @@ struct OrderCenterPage {
                             .borderRadius(ThemeManager.RADIUS_LG)
                             .height(32)
                             .type(ButtonType.Normal)
-                            .onClick(() => {
-                              orderRepository.updateOrderStatus(order.id, OrderStatus.COMPLETED);
-                              CreditEngine.onTradeCompleted(order.id, 'user_1', order.sellerId, order.carbonCredits || 0, order.carbonReduction || 0);
-                              AchievementDetector.detect('user_1', 'trade');
-                              AchievementDetector.detect(order.sellerId, 'trade');
-                              this.refreshOrders();
-                              promptAction.showToast({ message: '已确认收货，积分已到账' });
+                            .onClick(async () => {
+                              const success = await orderRepository.confirmReceive(order.id);
+                              if (success) {
+                                await CreditEngine.onTradeCompleted(order.id, 'user_1', order.sellerId, order.carbonCredits, order.carbonReduction);
+                                await AchievementDetector.detect('user_1', 'trade');
+                                await AchievementDetector.detect(order.sellerId, 'trade');
+                                this.refreshOrders();
+                                promptAction.showToast({ message: '已确认收货，积分已到账' });
+                              } else {
+                                promptAction.showToast({ message: '确认收货失败' });
+                              }
                             })
                         }
                         .width('100%')

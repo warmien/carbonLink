@@ -243,4 +243,69 @@ export class OrderService {
       paidAt: order.paid_at as number
     };
   }
+
+  static cancelOrder(orderId: string, userId: string): OrderDTO {
+    const order = db.prepare('SELECT * FROM orders WHERE id = ? AND buyer_id = ?').get(orderId, userId) as Record<string, unknown> | undefined;
+    if (!order) throw new Error('订单不存在');
+    const currentStatus = order.status as string;
+    if (currentStatus !== 'pending_payment') throw new Error('只能取消待付款订单');
+
+    const now = Date.now();
+    db.prepare('UPDATE orders SET status = ?, cancelled_at = ? WHERE id = ?').run('cancelled', now, orderId);
+
+    const skuId = order.sku_id as string || '';
+    if (skuId) {
+      db.prepare('UPDATE sku SET status = ?, updated_at = ? WHERE id = ?').run('on_sale', now, skuId);
+    }
+    db.prepare('UPDATE spu SET status = ?, updated_at = ? WHERE id = ?').run('on_sale', now, order.product_id as string);
+
+    return {
+      id: orderId,
+      spuId: order.product_id as string,
+      skuId: '',
+      productTitle: order.product_title as string,
+      productImage: order.product_image as string || '',
+      price: order.price as number,
+      originalPrice: order.price as number,
+      carbonReduction: 0,
+      carbonCredits: 0,
+      buyerId: order.buyer_id as string,
+      sellerId: order.seller_id as string,
+      buyerName: order.buyer_name as string,
+      sellerName: order.seller_name as string,
+      status: 'cancelled',
+      paymentMethod: '',
+      createdAt: order.created_at as number,
+      paidAt: order.paid_at as number
+    };
+  }
+
+  static payOrder(orderId: string, userId: string): OrderDTO {
+    const order = db.prepare('SELECT * FROM orders WHERE id = ? AND buyer_id = ?').get(orderId, userId) as Record<string, unknown> | undefined;
+    if (!order) throw new Error('订单不存在');
+    if ((order.status as string) !== 'pending_payment') throw new Error('订单状态不正确');
+
+    const now = Date.now();
+    db.prepare('UPDATE orders SET status = ?, paid_at = ? WHERE id = ?').run('pending_shipment', now, orderId);
+
+    return {
+      id: orderId,
+      spuId: order.product_id as string,
+      skuId: '',
+      productTitle: order.product_title as string,
+      productImage: order.product_image as string || '',
+      price: order.price as number,
+      originalPrice: order.price as number,
+      carbonReduction: 0,
+      carbonCredits: 0,
+      buyerId: order.buyer_id as string,
+      sellerId: order.seller_id as string,
+      buyerName: order.buyer_name as string,
+      sellerName: order.seller_name as string,
+      status: 'pending_shipment',
+      paymentMethod: '',
+      createdAt: order.created_at as number,
+      paidAt: now
+    };
+  }
 }
