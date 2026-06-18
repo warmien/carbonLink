@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserAuthService } from '../services/UserAuthService';
 
+// JWT双Token认证中间件：验证AccessToken签名 + 检查Token黑名单
+// AccessToken有效期2小时，RefreshToken有效期7天（见UserAuthService）
 export function userAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

@@ -55,6 +55,9 @@ export struct BannerView {
     this.isLoading = false;
   }
 
+  // 轮播图推荐评分公式：score = 浏览量×0.3 + 收藏数×2.0 + 时效性×10
+  // 时效性recency = max(0, 1 - 商品发布天数/7)，7天内新品优先
+  // 收藏权重最高(主动意愿信号)，时效性次之(校园场景新品优先)，浏览量最低(被动行为)
   private bannerScore(spu: SPU): number {
     const recency: number = Math.max(0, 1 - (Date.now() - spu.createdAt) / (7 * 24 * 3600 * 1000));
     return spu.viewCount * 0.3 + spu.favoriteCount * 2.0 + recency * 10;

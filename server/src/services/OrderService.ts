@@ -71,6 +71,7 @@ export class OrderService {
       if (images.length > 0) productImage = images[0];
     } catch (e) { }
 
+    // 数据库事务保障原子性：订单创建 + SKU下架 + SPU状态更新 + 卖家计数+1 必须同时成功
     const transaction = db.transaction(() => {
       db.prepare(`
         INSERT INTO orders (id, product_id, product_title, product_image, price, buyer_id, seller_id, buyer_name, seller_name, status, created_at, paid_at)

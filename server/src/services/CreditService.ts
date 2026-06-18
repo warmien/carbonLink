@@ -1,12 +1,14 @@
 import db from '../businessDatabase';
 
-const TRADE_BUYER_REWARD_RATIO = 0.2;
-const PUBLISH_REWARD = 10;
-const DONATION_MULTIPLIER = 1.5;
-const REFORM_MULTIPLIER = 2.0;
-const TRANSFER_FEE_RATIO = 0.1;
-const VIOLATION_DEDUCT_MULTIPLIER = 2.0;
+// 积分增减规则常量
+const TRADE_BUYER_REWARD_RATIO = 0.2;   // 买家交易奖励 = 卖家积分 × 20%
+const PUBLISH_REWARD = 10;               // 发布商品固定奖励 +10
+const DONATION_MULTIPLIER = 1.5;         // 捐赠积分 = 基础积分 × 1.5
+const REFORM_MULTIPLIER = 2.0;           // 改造积分 = 基础积分 × 2.0
+const TRANSFER_FEE_RATIO = 0.1;          // 转账手续费 = 转账金额 × 10%
+const VIOLATION_DEDUCT_MULTIPLIER = 2.0; // 违规扣分 = 原始积分 × 2.0
 
+// 等级阈值：基于累计获得(totalEarned)，非当前余额(balance)，等级只升不降
 const LEVEL_THRESHOLDS: { level: string; threshold: number }[] = [
   { level: '环保新手', threshold: 0 },
   { level: '环保达人', threshold: 100 },
@@ -41,6 +43,7 @@ function addTransaction(userId: string, type: string, amount: number, balanceAft
     .run(id, userId, type, amount, balanceAfter, relatedId, carbonReduction, now);
 }
 
+// 余额更新逻辑：正数→余额+累计获得增加；负数→余额+累计消耗增加，余额不足拒绝
 function updateBalance(userId: string, delta: number): { balance: number; totalEarned: number; totalSpent: number } {
   ensureCreditAccount(userId);
   const account = db.prepare('SELECT balance, total_earned, total_spent FROM credit_accounts WHERE user_id = ?').get(userId) as { balance: number; total_earned: number; total_spent: number };
@@ -68,6 +71,7 @@ function updateBalance(userId: string, delta: number): { balance: number; totalE
   return { balance: newBalance, totalEarned: newEarned, totalSpent: newSpent };
 }
 
+// 幂等性保障：通过relatedId去重，防止重复发放积分
 function existsByRelatedId(relatedId: string): boolean {
   const row = db.prepare('SELECT id FROM credit_transactions WHERE related_id = ?').get(relatedId) as { id: string } | undefined;
   return !!row;
