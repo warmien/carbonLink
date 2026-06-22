@@ -15,6 +15,7 @@ import favoriteRoutes from './routes/favorite';
 import orderRoutes from './routes/order';
 import obsRoutes from './routes/obs';
 import chatRoutes from './routes/chat';
+import creditRoutes from './routes/credit';
 import { auditMiddleware } from './middleware/audit';
 import businessDb from './businessDatabase';
 import { initObsFromEnv } from './services/ObsService';
@@ -68,6 +69,7 @@ app.use('/api/v1/favorites', favoriteRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/obs', obsRoutes);
 app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/credits', creditRoutes);
 app.use('/api/admin', analyticsRoutes);
 app.use('/api/export', exportRoutes);
 

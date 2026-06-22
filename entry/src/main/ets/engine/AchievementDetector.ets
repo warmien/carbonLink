@@ -1,13 +1,16 @@
 import { EcoAchievement } from '../models/EcoAchievement';
-import { CreditTransactionType } from '../models/CreditTransaction';
-import { creditTransactionRepository } from '../repository/CreditTransactionRepository';
 import { achievementRepository } from '../repository/AchievementRepository';
 import { CreditEngine } from './CreditEngine';
+import { creditAccountRepository } from '../repository/CreditAccountRepository';
 
 export class AchievementDetector {
-  static detect(userId: string, actionType: string): EcoAchievement[] {
+  static async detect(userId: string, actionType: string): Promise<EcoAchievement[]> {
     const achievements = achievementRepository.getAchievements(userId);
     const newlyUnlocked: EcoAchievement[] = [];
+
+    const stats = await creditAccountRepository.getStats(userId);
+    const tradeCount: number = typeof stats['tradeCount'] === 'number' ? stats['tradeCount'] : 0;
+    const totalReduction: number = typeof stats['totalReduction'] === 'number' ? stats['totalReduction'] : 0;
 
     for (let i = 0; i < achievements.length; i++) {
       const a = achievements[i];
@@ -17,13 +20,13 @@ export class AchievementDetector {
 
       let progress = 0;
       if (a.id === 'first_trade') {
-        progress = creditTransactionRepository.countByType(userId, CreditTransactionType.TRADE_REWARD);
+        progress = tradeCount;
       } else if (a.id === 'streak_7days') {
-        progress = AchievementDetector.calcConsecutiveDays(userId);
+        progress = tradeCount >= 7 ? 7 : 0;
       } else if (a.id === 'total_10trades') {
-        progress = creditTransactionRepository.countByType(userId, CreditTransactionType.TRADE_REWARD);
+        progress = tradeCount;
       } else if (a.id === 'reduce_1kg') {
-        progress = AchievementDetector.estimateCarbonReduction(userId);
+        progress = Math.floor(totalReduction * 10) / 10;
       }
 
       achievementRepository.updateProgress(userId, a.id, progress);
@@ -33,36 +36,11 @@ export class AchievementDetector {
         if (unlocked) {
           newlyUnlocked.push(unlocked);
           const relatedId = 'achievement_' + a.id;
-          if (!creditTransactionRepository.existsByRelatedId(relatedId)) {
-            CreditEngine.onAchievementReward(userId, a.rewardCredits, relatedId);
-          }
+          await CreditEngine.onAchievementReward(userId, a.rewardCredits, relatedId);
         }
       }
     }
 
     return newlyUnlocked;
-  }
-
-  private static calcConsecutiveDays(userId: string): number {
-    const dates = creditTransactionRepository.getTradeDates(userId);
-    if (dates.length === 0) return 0;
-    let streak = 1;
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    for (let i = 0; i < dates.length - 1; i++) {
-      const diff = dates[i] - dates[i + 1];
-      if (diff <= oneDayMs + 1) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-    return streak;
-  }
-
-  private static estimateCarbonReduction(userId: string): number {
-    const tradeCount = creditTransactionRepository.countByType(userId, CreditTransactionType.TRADE_REWARD);
-    const kgPerTrade = 0.1;
-    const totalKg = tradeCount * kgPerTrade;
-    return Math.floor(totalKg * 10) / 10;
   }
 }

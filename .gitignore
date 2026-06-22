@@ -41,5 +41,18 @@ admin/dist/
 # Spec
 .spec/
 
-# Dev log
+# Docs & reports (large files)
+课程报告.md
+PROJECT_CORE.md
+DEFENSE_QA.md
+frontend-architecture.drawio
 DEVLOG.md
+
+# Deploy archives
+*.zip
+
+# Server test/temp files
+server/test-*.js
+server/migrate-*.js
+server/server.err
+server/start.js

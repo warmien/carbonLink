@@ -16,6 +16,8 @@ export class Order {
   completedAt: number = 0;
   shippingMethod: string = '';
   trackingNumber: string = '';
+  carbonCredits: number = 0;
+  carbonReduction: number = 0;
 
   static getStatusLabel(status: OrderStatus): string {
     switch (status) {

@@ -81,6 +81,8 @@ function getConvForUser(row: Record<string, unknown>, userId: string): Conversat
 }
 
 export class ChatService {
+  // 会话创建：用户ID排序后按(user1_id, user2_id, product_id)去重
+  // 同一对用户的不同商品 = 不同会话，因为买家可能分别咨询不同商品
   static findOrCreateConversation(buyerId: string, sellerId: string, productId: string): ConversationDTO {
     if (buyerId === sellerId) {
       throw new Error('CANNOT_CHAT_WITH_SELF');
@@ -213,6 +215,7 @@ export class ChatService {
     return { messages, total: totalRow.cnt, page, size };
   }
 
+  // 消息发送：事务写入DB + 更新会话 + 对方unread+1 + WebSocket推送new_message和conversation_update
   static sendMessage(conversationId: string, senderId: string, content: string, msgType: string = 'text'): SendMessageResult {
     const conv = db.prepare(
       'SELECT * FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)'

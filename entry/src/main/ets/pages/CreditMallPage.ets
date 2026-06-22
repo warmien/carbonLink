@@ -19,18 +19,18 @@ struct CreditMallPage {
   @State btnScale: number = 1;
   private userId: string = 'user_1';
 
-  aboutToAppear(): void {
+  async aboutToAppear(): Promise<void> {
     this.products = mallProductRepository.getProducts();
-    this.balance = creditAccountRepository.getBalance(this.userId);
+    this.balance = await creditAccountRepository.getBalance(this.userId);
     this.exchangeRecords = exchangeRecordRepository.getByUserId(this.userId);
   }
 
-  doExchange(): void {
+  async doExchange(): Promise<void> {
     if (!this.selectedProduct) return;
-    const result = CreditEngine.exchangeCredits(this.userId, this.selectedProduct.id, this.selectedProduct.requiredCredits);
+    const result = await CreditEngine.exchangeCredits(this.userId, this.selectedProduct.id, this.selectedProduct.requiredCredits);
     if (result.success) {
       promptAction.showToast({ message: '兑换成功！' });
-      this.balance = creditAccountRepository.getBalance(this.userId);
+      this.balance = await creditAccountRepository.getBalance(this.userId);
       this.products = mallProductRepository.getProducts();
       this.exchangeRecords = exchangeRecordRepository.getByUserId(this.userId);
     } else {

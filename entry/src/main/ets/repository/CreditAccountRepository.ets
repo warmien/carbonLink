@@ -1,67 +1,67 @@
 import { CreditAccount, UserLevel } from '../models/CreditAccount';
-import { CreditRules } from '../config/CreditRules';
+import { HttpService } from '../services/HttpService';
+
+function toNum(val: string | number | boolean | object | undefined): number {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const n = parseFloat(val);
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
+function toStr(val: string | number | boolean | object | undefined): string {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return val.toString();
+  return '';
+}
+
+function toLevel(val: string | number | boolean | object | undefined): UserLevel {
+  if (typeof val === 'string') {
+    if (val === '环保新手') return UserLevel.BEGINNER;
+    if (val === '环保达人') return UserLevel.EXPERT;
+    if (val === '环保先锋') return UserLevel.PIONEER;
+    if (val === '环保卫士') return UserLevel.GUARDIAN;
+    if (val === '环保英雄') return UserLevel.HERO;
+  }
+  return UserLevel.BEGINNER;
+}
 
 export class CreditAccountRepository {
-  private accounts: Map<string, CreditAccount> = new Map();
-
-  getOrCreate(userId: string): CreditAccount {
-    let account = this.accounts.get(userId);
-    if (!account) {
-      account = new CreditAccount();
-      account.userId = userId;
-      account.balance = 0;
-      account.totalEarned = 0;
-      account.totalSpent = 0;
-      account.level = UserLevel.BEGINNER;
-      account.createdAt = Date.now();
-      this.accounts.set(userId, account);
-    }
-    return account;
-  }
-
-  updateBalance(userId: string, delta: number): CreditAccount {
-    const account = this.getOrCreate(userId);
-    if (delta > 0) {
-      account.balance += delta;
-      account.totalEarned += delta;
-    } else {
-      const deductAmount = Math.abs(delta);
-      if (account.balance < deductAmount) {
+  async getAccount(userId: string): Promise<CreditAccount> {
+    try {
+      const resp = await HttpService.GET('/credits/account');
+      if (resp.code === 0 && resp.data !== null) {
+        const account = new CreditAccount();
+        account.userId = userId;
+        account.balance = toNum(resp.data['balance']);
+        account.totalEarned = toNum(resp.data['totalEarned']);
+        account.totalSpent = toNum(resp.data['totalSpent']);
+        account.level = toLevel(resp.data['level']);
         return account;
       }
-      account.balance -= deductAmount;
-      account.totalSpent += deductAmount;
+    } catch (err) {
     }
-    this.accounts.set(userId, account);
+    const account = new CreditAccount();
+    account.userId = userId;
     return account;
   }
 
-  updateLevel(userId: string, totalEarned: number): UserLevel {
-    const account = this.getOrCreate(userId);
-    const newLevel = CreditRules.getLevelByTotalEarned(totalEarned);
-    const oldLevel = account.level;
-    const oldIndex = this.findLevelIndex(oldLevel);
-    const newIndex = this.findLevelIndex(newLevel);
-    if (newIndex > oldIndex) {
-      account.level = newLevel;
-      this.accounts.set(userId, account);
-    }
-    return account.level;
+  async getBalance(userId: string): Promise<number> {
+    const account = await this.getAccount(userId);
+    return account.balance;
   }
 
-  getBalance(userId: string): number {
-    const account = this.accounts.get(userId);
-    return account ? account.balance : 0;
-  }
-
-  private findLevelIndex(level: UserLevel): number {
-    const thresholds = CreditRules.LEVEL_THRESHOLDS;
-    for (let i = 0; i < thresholds.length; i++) {
-      if (thresholds[i].level === level) {
-        return i;
+  async getStats(userId: string): Promise<Record<string, string | number | object>> {
+    try {
+      const resp = await HttpService.GET('/credits/stats');
+      if (resp.code === 0 && resp.data !== null) {
+        return resp.data;
       }
+    } catch (err) {
     }
-    return 0;
+    const empty: Record<string, string | number | object> = {};
+    return empty;
   }
 }
 

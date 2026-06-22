@@ -10,9 +10,20 @@ export struct BannerView {
   @State bannerProducts: SPU[] = [];
   @State isLoading: boolean = true;
   private controller: SwiperController = new SwiperController();
+  private refreshTimer: number = -1;
 
   aboutToAppear(): void {
     this.loadBannerProducts();
+    this.refreshTimer = setInterval(() => {
+      this.loadBannerProducts();
+    }, 10000);
+  }
+
+  aboutToDisappear(): void {
+    if (this.refreshTimer !== -1) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = -1;
+    }
   }
 
   private async loadBannerProducts(): Promise<void> {
@@ -25,11 +36,31 @@ export struct BannerView {
           onSale.push(spu);
         }
       }
-      this.bannerProducts = onSale.slice(0, 5);
+      const scored: SPU[] = onSale.slice();
+      for (let i = 0; i < scored.length; i++) {
+        for (let j = i + 1; j < scored.length; j++) {
+          const scoreI: number = this.bannerScore(scored[i]);
+          const scoreJ: number = this.bannerScore(scored[j]);
+          if (scoreJ > scoreI) {
+            const tmp: SPU = scored[i];
+            scored[i] = scored[j];
+            scored[j] = tmp;
+          }
+        }
+      }
+      this.bannerProducts = scored.slice(0, 5);
     } catch (e) {
       this.bannerProducts = [];
     }
     this.isLoading = false;
+  }
+
+  // 轮播图推荐评分公式：score = 浏览量×0.3 + 收藏数×2.0 + 时效性×10
+  // 时效性recency = max(0, 1 - 商品发布天数/7)，7天内新品优先
+  // 收藏权重最高(主动意愿信号)，时效性次之(校园场景新品优先)，浏览量最低(被动行为)
+  private bannerScore(spu: SPU): number {
+    const recency: number = Math.max(0, 1 - (Date.now() - spu.createdAt) / (7 * 24 * 3600 * 1000));
+    return spu.viewCount * 0.3 + spu.favoriteCount * 2.0 + recency * 10;
   }
 
   private getDisplayImage(spu: SPU): string {

@@ -1,3 +1,5 @@
+// 碳积分计算条目：每个子类别对应一个碳减排量和碳积分范围
+// 核心公式：碳减排量 = (minReduction + maxReduction) / 2 × conditionFactor
 export class CarbonCreditEntry {
   name: string = '';
   minReduction: number = 0;
@@ -14,6 +16,7 @@ export class CarbonCreditEntry {
   }
 }
 
+// 成色系数：成色越好，碳减排价值越高（延长产品完整使用寿命，避免新品制造碳排放）
 export class ConditionFactor {
   static readonly FACTORS: Record<string, number> = {
     'A级-全新未用': 1.0,
@@ -134,6 +137,7 @@ export class CarbonCreditTable {
     '其他闲置': []
   };
 
+  // 子类别查找算法：1.精确匹配 → 2.模糊匹配(去"类"字双向包含) → 3.兜底取类别首项 → 4.返回null
   static getEntry(category: string, subCategory: string): CarbonCreditEntry | null {
     const entries = CarbonCreditTable.TABLE[category];
     if (!entries) {
@@ -157,6 +161,7 @@ export class CarbonCreditTable {
     return null;
   }
 
+  // 核心计算：碳减排量/碳积分 = 区间均值 × 成色系数，保留2位小数
   static calculate(category: string, subCategory: string, condition: string): CarbonCreditResult {
     const entry = CarbonCreditTable.getEntry(category, subCategory);
     if (!entry) {

@@ -1,4 +1,5 @@
 import db from '../businessDatabase';
+import { ObsService } from './ObsService';
 import {
   CreateSPUParams,
   SPUDTO,
@@ -341,7 +342,7 @@ export class ProductService {
       const removedImages = updates['removedImages'] as string[];
       for (const url of removedImages) {
         try {
-          ObsServiceInstance.deleteObjectByUrl(url);
+          ObsService.deleteObjectByUrl(url);
         } catch (e) {
           console.error('[ProductService] Failed to delete OBS object:', url, e);
         }
